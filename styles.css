@@ -203,6 +203,30 @@ img{display:block;max-width:100%}
   stroke-width:.7;vector-effect:non-scaling-stroke}
 .bay.is-car{fill:var(--red);fill-opacity:.9;stroke:var(--red);stroke-opacity:1}
 
+/* 可缩放的地图：单指拖、双指捏、滚轮、双击 */
+.baymap,.planmap{touch-action:none;cursor:grab}
+.baymap.is-zoomed,.planmap.is-zoomed{cursor:move}
+.bay{cursor:pointer}
+.bay:hover{fill:var(--ink-3);fill-opacity:.35}
+.bay:focus-visible{outline:none;fill:var(--ink);fill-opacity:.35}
+
+/* ---------- 「是不是停在这」 ---------- */
+.ask{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;
+  padding:var(--s4);background:rgba(10,11,12,.42);opacity:0;transition:opacity .2s ease}
+.ask.is-on{opacity:1}
+.ask-card{width:100%;max-width:448px;padding:var(--s5);border-radius:14px;
+  background:var(--card);box-shadow:0 12px 40px rgba(0,0,0,.28);
+  transform:translateY(14px);transition:transform .24s cubic-bezier(.2,.75,.25,1)}
+.ask.is-on .ask-card{transform:none}
+.ask-title{margin:0;font-size:19px;font-weight:700}
+.ask-where{margin:var(--s2) 0 var(--s5);font-size:15px;color:var(--ink-2)}
+.ask-row{display:flex;gap:var(--s3)}
+.btn-ghost,.btn-solid{flex:1;min-height:var(--tap);padding:var(--s3);border-radius:var(--r);
+  font-size:16px;font-weight:600;transition:background .15s}
+.btn-ghost{background:var(--sunk);color:var(--ink)}
+.btn-solid{background:var(--ink);color:var(--paper);font-weight:700}
+.btn-solid:active{background:var(--red);color:var(--on-red)}
+
 /* 「你在这」：蓝色，和代表「你的车」的红色分开 */
 .hereme{pointer-events:none}
 .here-acc{fill:#2E5BD9;fill-opacity:.12;stroke:#2E5BD9;stroke-opacity:.35;

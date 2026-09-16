@@ -200,7 +200,30 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const parkName = id => (CARPARKS[id] || ['?', '#888'])[0];
 const parkFill = id => (CARPARKS[id] || ['?', '#888'])[1];
 
-const state = { level: 'L1', pick: 'L1', detail: null, gps: null, watch: null, busy: false };
+const state = { level: 'L1', pick: 'L1', detail: null, gps: null, watch: null, busy: false,
+                parked: null, ask: null };
+
+/* 这一层的车停在哪。用户自己在车位图上标过就以用户的为准，否则用 CONFIG 里的演示数据 */
+function carOf(lv){
+  if (state.parked) return state.parked.level === lv ? state.parked : null;   // 车只可能在一层
+  const c = CONFIG.levels[lv].car;
+  return { level: lv, park: c.carpark, bay: c.bay != null ? c.bay : null, ref: null };
+}
+
+/* 标过的车位记下来，刷新页面还在 —— 演示的时候不用每次重标 */
+const PARKED_KEY = 'findmycar:parked';
+function loadParked(){
+  try {
+    const raw = localStorage.getItem(PARKED_KEY);
+    if (raw) state.parked = JSON.parse(raw);
+  } catch (e) { /* 隐私模式下 localStorage 会抛，忽略就好 */ }
+}
+function saveParked(){
+  try {
+    if (state.parked) localStorage.setItem(PARKED_KEY, JSON.stringify(state.parked));
+    else localStorage.removeItem(PARKED_KEY);
+  } catch (e) {}
+}
 
 /* 由本色算出侧面的深浅：太深的颜色改成往亮里混，免得糊成一片 */
 function sideColour(hex, amount){
@@ -521,6 +544,8 @@ function inPoly(p, poly){
   return inside;
 }
 
+const ROWS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';   // 跳过 I 和 O，免得和 1 / 0 混
+
 /* 标准车位 2.5m × 5m，通道 6m。换算成图纸单位 */
 const baySpec = upm => ({ bayW: 2.5 * upm, bayD: 5 * upm, aisle: 6 * upm });
 
@@ -535,15 +560,22 @@ function layoutBays(poly, o){
   const world = (x, y) => [x * c - y * s, x * s + y * c];
 
   const out = [];
+  let rowNo = 0;
   for (let by = r.y0; by < r.y1; by += band){
     for (const dy of [0, bayD + aisle]){
       const y = by + dy;
       if (y + bayD > r.y1) continue;
+      let col = 0;
+      const row = [];
       for (let x = r.x0; x + bayW <= r.x1; x += bayW){
         const quad = [[x, y], [x + bayW, y], [x + bayW, y + bayD], [x, y + bayD]].map(q => world(q[0], q[1]));
-        if (quad.every(q => inPoly(q, poly))){
-          out.push({ quad, row: Math.round((by - r.y0) / band), face: dy ? 1 : 0 });
-        }
+        if (quad.every(q => inPoly(q, poly))) row.push({ quad, col: col++ });
+      }
+      if (row.length){
+        const letter = ROWS[rowNo % ROWS.length] + (rowNo >= ROWS.length ? String(Math.floor(rowNo / ROWS.length) + 1) : '');
+        row.forEach(b => { b.row = letter; b.ref = `Row ${letter} · Bay ${b.col + 1}`; });
+        out.push(...row);
+        rowNo++;
       }
     }
   }
@@ -553,11 +585,13 @@ function layoutBays(poly, o){
 /* 屏 2：我们自己画的楼层平面图。商场本体是静态的，只有停车区能点 */
 function renderLevel(lv, drop){
   state.level = lv;
-  const L = CONFIG.levels[lv], mine = L.car.carpark;
+  const L = CONFIG.levels[lv], car = carOf(lv), mine = car ? car.park : null;
 
-  $('#level-swatch').style.background = parkFill(mine);
-  $('#level-title').textContent = parkName(mine);
-  $('#level-sub').textContent = `Your car is here, ${L.name}` +
+  const sw = $('#level-swatch');
+  sw.style.background = mine ? parkFill(mine) : 'transparent';
+  sw.hidden = !mine;
+  $('#level-title').textContent = mine ? parkName(mine) : L.name;
+  $('#level-sub').textContent = (mine ? `Your car is here, ${L.name}` : `Tap the bay you parked in`) +
     (state.gps ? ` · GPS accuracy ±${Math.round(state.gps.coords.accuracy)} m` : '');
   $$('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.level === lv)));
 
@@ -578,10 +612,16 @@ function renderLevel(lv, drop){
 
   const u = P.w / 1000;                // 尺寸跟着图纸坐标空间缩放
   const parsed = zones.map(z => ({ ...z, poly: parseZone(z.pts) }));
+  /* 车标落点：标过车位就落在那一格上，否则落在整块车场的中心 */
   const my = parsed.find(z => z.park === mine);
-  const car = (L.car.x != null && L.car.y != null)
-    ? [L.car.x / 100 * P.w, L.car.y / 100 * P.h]
-    : (my ? centroid(my.poly) : null);
+  let at = null;
+  if (my){
+    at = centroid(my.poly);
+    if (car.bay != null){
+      const spots = layoutBays(my.poly, baySpec(P.upm));
+      if (spots[car.bay]) at = centroid(spots[car.bay].quad);
+    }
+  }
 
   /* 商场本体：静态，不可点 */
   const mall = (P.mall || []).map(d => `<polygon class="pm" points="${esc(d)}"/>`).join('');
@@ -631,8 +671,8 @@ function renderLevel(lv, drop){
 
   /* 外层负责定位、内层负责动画：CSS 的 transform 会盖掉 SVG 的 transform 属性，
      写在同一个元素上车标会被打回原点 */
-  const marker = !car ? '' :
-    `<g transform="translate(${car[0].toFixed(0)},${car[1].toFixed(0)})">` +
+  const marker = !at ? '' :
+    `<g transform="translate(${at[0].toFixed(0)},${at[1].toFixed(0)})">` +
       `<g class="carmark${drop ? ' drop' : ''}">` +
         `<circle class="carmark-halo" r="${(34 * u).toFixed(1)}"/>` +
         `<circle class="carmark-dot" r="${(15 * u).toFixed(1)}" stroke-width="${(5 * u).toFixed(1)}"/>` +
@@ -655,28 +695,32 @@ function renderLevel(lv, drop){
     `<svg viewBox="${bx0.toFixed(0)} ${by0.toFixed(0)} ${(bx1-bx0).toFixed(0)} ${(by1-by0).toFixed(0)}" ` +
       `xmlns="http://www.w3.org/2000/svg" class="planmap" role="group" ` +
       `aria-label="${esc(L.name)} plan, tap a car park">` +
-      streets + `<g class="pmall">${mall}</g>` + anchors +
-      `<g class="pzs">${pz}</g>` + here + marker +
+      `<g class="zoomer">` +
+        streets + `<g class="pmall">${mall}</g>` + anchors +
+        `<g class="pzs">${pz}</g>` + here + marker +
+      `</g>` +
     `</svg>`;
 
   $$('#level-overlay .pz').forEach(g => {
     const open = () => openDetail(g.dataset.park);
-    g.addEventListener('click', open);
+    g.addEventListener('click', () => { if (!zoomMoved($('#level-overlay'))) open(); });
     g.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); }
     });
   });
 
+  makeZoomable($('#level-overlay svg'));
+
   $('#level-note').textContent = my
-    ? `Your car is in the ${parkName(mine)}. Tap any car park to see it.`
-    : 'Tap a car park to see it.';
+    ? `Your car is in the ${parkName(mine)}${car.ref ? ', ' + car.ref : ''}. Tap a car park to see its bays.`
+    : 'Tap a car park to see its bays.';
 }
 
 /* 屏 3：这一个停车场的车位图。车位是按轮廓生成的，不是真实数据 */
 function renderDetail(){
-  const L = CONFIG.levels[state.level];
-  const id = state.detail || L.car.carpark;
-  const mine = id === L.car.carpark;
+  const L = CONFIG.levels[state.level], car = carOf(state.level);
+  const id = state.detail || (car && car.park) || (L.zones[0] && L.zones[0].park);
+  const mine = !!car && id === car.park;
   const info = CONFIG.carparks[id] || { detail: {}, tips: [] };
   const zone = (L.zones || []).find(z => z.park === id);
 
@@ -698,11 +742,13 @@ function renderDetail(){
 
   const poly = parseZone(zone.pts);
   const spots = layoutBays(poly, baySpec(L.plan.upm));
-  const myBay = mine ? (L.car.bay != null ? L.car.bay : Math.floor(spots.length * 0.42)) : -1;
+  state.spots = spots;
+  const myBay = mine ? (car.bay != null ? car.bay : Math.floor(spots.length * 0.42)) : -1;
+  state.detail = id;
 
   $('#detail-sub').textContent = mine
-    ? `${L.name} · your car is here · about ${spots.length} bays`
-    : `${L.name} · about ${spots.length} bays`;
+    ? `${L.name} · ${spots[myBay] ? spots[myBay].ref : 'your car is here'}`
+    : `${L.name} · ${spots.length} bays · tap the one you parked in`;
 
   /* 取景到这个车场，留一点边 */
   const xs = poly.map(p => p[0]), ys = poly.map(p => p[1]);
@@ -717,7 +763,9 @@ function renderDetail(){
 
   const quad = q => q.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
   const cells = spots.map((b, i) =>
-    `<polygon class="bay${i === myBay ? ' is-car' : ''}" points="${quad(b.quad)}"/>`).join('');
+    `<polygon class="bay${i === myBay ? ' is-car' : ''}" points="${quad(b.quad)}" ` +
+      `data-bay="${i}" role="button" tabindex="0" ` +
+      `aria-label="${esc(b.ref)}${i === myBay ? ', your car' : ''}. Park here"/>`).join('');
 
   let mark = '';
   if (myBay >= 0 && spots[myBay]){
@@ -733,12 +781,154 @@ function renderDetail(){
     `<svg viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${(x1-x0).toFixed(0)} ${(y1-y0).toFixed(0)}" ` +
       `xmlns="http://www.w3.org/2000/svg" class="baymap" role="img" ` +
       `aria-label="${esc(parkName(id))}, ${spots.length} bays${mine ? ', your car marked' : ''}">` +
-      `<polygon class="bay-ground" points="${quad(poly)}" style="--pc:${parkFill(id)}"/>` +
-      `<g class="bays">${cells}</g>${mark}` +
+      `<g class="zoomer">` +
+        `<polygon class="bay-ground" points="${quad(poly)}" style="--pc:${parkFill(id)}"/>` +
+        `<g class="bays">${cells}</g>${mark}` +
+      `</g>` +
     `</svg>`;
+
+  /* 每一格都能点：问一句「是不是停在这」，确认了就记下来 */
+  layer.querySelectorAll('.bay').forEach(el => {
+    const pick = () => askPark(id, +el.dataset.bay);
+    el.addEventListener('click', e => { if (!zoomMoved(layer)) pick(); });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(); }
+    });
+  });
+  makeZoomable(layer.querySelector('svg'));
 
   $('#detail-tips').innerHTML = (info.tips || []).map(t =>
     `<li>${thumb(t.image, t.alt)}<div><b>${esc(t.title)}</b><small>${esc(t.note)}</small></div></li>`).join('');
+}
+
+/* =========================================================
+   地图缩放：车位在手机上只有几像素，得能放大才点得到。
+   单指拖动 = 平移，双指 = 捏合，滚轮 / 双击也支持
+   ========================================================= */
+const MINK = 1, MAXK = 16;
+
+function makeZoomable(svg){
+  if (!svg || svg.dataset.zoom) return;
+  const g = svg.querySelector('.zoomer');
+  if (!g) return;
+  svg.dataset.zoom = '1';
+
+  const vb = svg.viewBox.baseVal;
+  const view = { k: 1, x: 0, y: 0 };
+  const pts = new Map();
+  let pinch = null;
+
+  const apply = () => {
+    const span = 1 - view.k;
+    const lo = x => Math.min((vb.x + vb.width) * span, Math.max(vb.x * span, x));
+    const loY = y => Math.min((vb.y + vb.height) * span, Math.max(vb.y * span, y));
+    view.x = lo(view.x); view.y = loY(view.y);
+    g.setAttribute('transform', `translate(${view.x.toFixed(2)} ${view.y.toFixed(2)}) scale(${view.k.toFixed(4)})`);
+    svg.classList.toggle('is-zoomed', view.k > 1.02);
+  };
+
+  /* 屏幕坐标 -> viewBox 坐标 */
+  const toUser = e => {
+    const m = svg.getScreenCTM();
+    if (!m) return [0, 0];
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    return [p.x, p.y];
+  };
+
+  /* 以某点为锚缩放，那一点在屏幕上不动 */
+  const zoomAt = (p, k1) => {
+    k1 = Math.max(MINK, Math.min(MAXK, k1));
+    const c = [(p[0] - view.x) / view.k, (p[1] - view.y) / view.k];
+    view.k = k1;
+    view.x = p[0] - c[0] * k1;
+    view.y = p[1] - c[1] * k1;
+    apply();
+  };
+
+  svg.addEventListener('pointerdown', e => {
+    svg.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, toUser(e));
+    svg.dataset.moved = '0';
+    if (pts.size === 2){
+      const [a, b] = [...pts.values()];
+      pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), k: view.k };
+    }
+  });
+
+  svg.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    const prev = pts.get(e.pointerId), now = toUser(e);
+    pts.set(e.pointerId, now);
+
+    if (pts.size === 2 && pinch){
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      if (pinch.d > 0) zoomAt([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], pinch.k * (d / pinch.d));
+      svg.dataset.moved = '1';
+    } else if (pts.size === 1){
+      const dx = now[0] - prev[0], dy = now[1] - prev[1];
+      if (Math.abs(dx) + Math.abs(dy) > vb.width * 0.004) svg.dataset.moved = '1';
+      view.x += dx; view.y += dy;
+      apply();
+    }
+  });
+
+  const drop = e => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+  };
+  svg.addEventListener('pointerup', drop);
+  svg.addEventListener('pointercancel', drop);
+
+  svg.addEventListener('wheel', e => {
+    e.preventDefault();
+    zoomAt(toUser(e), view.k * (e.deltaY < 0 ? 1.18 : 1 / 1.18));
+  }, { passive: false });
+
+  svg.addEventListener('dblclick', e => {
+    e.preventDefault();
+    zoomAt(toUser(e), view.k > 1.8 ? 1 : 4);
+  });
+
+  svg.reset = () => { view.k = 1; view.x = 0; view.y = 0; apply(); };
+  apply();
+}
+
+/* 刚才那一下是拖动还是点击 —— 拖完不该顺手选中一个车位 */
+function zoomMoved(box){
+  const svg = box.querySelector('svg');
+  return !!svg && svg.dataset.moved === '1';
+}
+
+/* ---------- 「是不是停在这」 ---------- */
+function askPark(park, bay){
+  const spot = (state.spots || [])[bay];
+  if (!spot) return;
+  state.ask = { level: state.level, park, bay, ref: spot.ref };
+  $('#ask-where').textContent = `${parkName(park)} · ${spot.ref}`;
+  const el = $('#ask');
+  el.hidden = false;
+  void el.offsetWidth;
+  el.classList.add('is-on');
+  $('#ask-yes').focus();
+}
+
+function closeAsk(){
+  const el = $('#ask');
+  el.classList.remove('is-on');
+  setTimeout(() => { el.hidden = true; }, 220);
+  state.ask = null;
+}
+
+function confirmPark(){
+  if (!state.ask) return;
+  state.parked = { ...state.ask };
+  saveParked();
+  const park = state.ask.park;
+  closeAsk();
+  state.detail = park;
+  renderDetail();
+  renderLevel(state.level, false);
 }
 
 /* ---------- 换屏 ---------- */
@@ -816,11 +1006,17 @@ function openDetail(park){
 }
 
 /* ---------- 接线 ---------- */
+loadParked();
 renderStage();
+$('#ask-yes').addEventListener('click', confirmPark);
+$('#ask-no').addEventListener('click', closeAsk);
+$('#ask').addEventListener('click', e => { if (e.target.id === 'ask') closeAsk(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && state.ask) closeAsk(); });
 paintPick();
 $$('[data-pick]').forEach(b => b.addEventListener('click', () => setPick(b.dataset.pick)));
 $$('.seg button').forEach(b => b.addEventListener('click', () => renderLevel(b.dataset.level, true)));
 $$('[data-back]').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.back === 'home'){ trackHere(false); state.gps = null; }
+  if (b.dataset.reset){ state.parked = null; saveParked(); }   // 找到车了，这次的记录就结束
   show(b.dataset.back, 'back');
 }));

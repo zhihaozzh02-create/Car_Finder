@@ -69,6 +69,28 @@ against a seed do not separate them, because the two scans have different paper 
 directory prints ("Pink Carpark"). A colour can cover two separate areas - Aqua on L1, Yellow and
 Orange on L2 - and each area is its own polygon under the same name.
 
+## Bays, and marking where you parked
+There is no real bay data. `layoutBays()` generates bays inside a car park's traced outline: rows
+either side of a drive aisle, which is the layout the centre's own kiosk screens show. The row
+direction comes from `minAreaRect()` of the polygon rather than a fixed angle - that is what stops
+the long slanted Green car park coming out skewed - and only bays whose four corners fall inside
+the outline are kept, so none hang over the boundary. Sizes come from a real 2.5 x 5 m bay and a
+6 m aisle through `plan.upm`, the level's units-per-metre, so both levels agree despite being
+traced at different scales. The totals land near 5000 across the two levels, the right order for
+this centre. Each bay gets a `Row C / Bay 16` reference; row letters skip I and O.
+
+Every bay is tappable and asks "Did you park here?". Confirming writes `state.parked`
+(`{level, park, bay, ref}`) to `localStorage` under `findmycar:parked`, and `carOf(lv)` makes that
+override the demo data in `CONFIG.levels[*].car`. **A car can only be on one level** - `carOf()`
+returns `null` for the other one, so the other level correctly shows no car. "I found my car"
+clears the record.
+
+Both maps pan and zoom - one finger drags, two pinch, wheel and double-click also work - via
+`makeZoomable()`, which transforms a `<g class="zoomer">` inside the SVG and clamps the translate
+so the content cannot be dragged out of view. Bays are only a few pixels at map scale, so zoom is
+what makes tapping one possible; `zoomMoved()` suppresses the click that would otherwise fire at
+the end of a drag.
+
 ## "You are here"
 `CONFIG.levels[*].geo` holds two calibration points - for each, the plan coordinate and the real
 lat/lon of the same spot. `geoToPlan()` solves the similarity transform (rotation, scale,

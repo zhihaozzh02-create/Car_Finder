@@ -66,6 +66,18 @@
     <button class="primary" data-back="home" data-reset="1">I found my car</button>
   </section>
 
+  <!-- 点了某个车位之后问一句 -->
+  <div class="ask" id="ask" hidden role="dialog" aria-modal="true" aria-labelledby="ask-title">
+    <div class="ask-card">
+      <p class="ask-title" id="ask-title">Did you park here?</p>
+      <p class="ask-where" id="ask-where"></p>
+      <div class="ask-row">
+        <button class="btn-ghost" id="ask-no" type="button">Not here</button>
+        <button class="btn-solid" id="ask-yes" type="button">Yes, my car is here</button>
+      </div>
+    </div>
+  </div>
+
   <div class="locating" id="locating" hidden role="status" aria-live="polite">
     <div class="beacon"></div>
     <p>Finding your car…</p>
