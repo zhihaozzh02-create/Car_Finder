@@ -11,9 +11,12 @@ No build step, no dependencies - open `index.html` in a browser.
   "Can't Find Your Car?" sign; the 3D model on screen 1 is traced from it
 
 ## Flow (3 screens)
-1. **Home** (`#home`): a 3D model of the centre drawn as **two stacked decks** - L2 above L1.
-   Each deck is one tap target (`<g class="deck">`, also keyboard-operable). Tapping a deck
-   picks that level. There are no L1 / L2 buttons; the model *is* the control.
+1. **Home** (`#home`): nothing but the 3D model, drawn as **two stacked decks** - L2 above L1,
+   centred in the viewport. There is deliberately no top bar, no visible heading and no caption -
+   the two decks are the entire screen. Each deck is a real `<button class="deck">` holding an
+   HTML label (`.deck-tag`) and the plate SVG (`.deck-art`); the model *is* the control.
+   A visually hidden `<h1 class="sr-only">` keeps the screen named for screen readers and is what
+   `show()` moves focus to. **Do not add a heading, a hint line or L1 / L2 buttons back.**
 2. **Level plan** (`#level`): floor plan of the chosen level. Red zone = the user's car park,
    red pin = the car, a callout sits on the pin. Tapping the pin opens screen 3.
    The L1 / L2 segmented control in the top bar switches level without re-running the search.
@@ -32,8 +35,10 @@ No build step, no dependencies - open `index.html` in a browser.
    blue bands) match the real sign. Coordinates are already-projected picture coordinates in a
    999 x 755 box - there is no separate plan space. One shape can cover two car parks
    (`AQUA` = P4 + P5, `BLUE` = P2 + P3), exactly as the sign draws them.
-4. `MODEL` - how the two decks are laid out: `squash` (1 = the sign's exact proportions, but the
-   stack gets very tall), `depth` (deck thickness), `gap`, `pad`, `tagW`.
+4. `MODEL` - how one deck is drawn: `squash` (1 = the sign's exact proportions, but the stack gets
+   very tall), `depth` (deck thickness), `pad` (canvas margin). The spacing between the two decks
+   and the size of the L1 / L2 labels are CSS, not JS - see `.decks` and `.deck-tag` in
+   `styles.css`. Both decks share one rendered plate; `deck()` is called once in `renderStage()`.
 
 To swap in a floor plan: drop the file in `images/`, set `image: 'images/L1.png'`, set `aspect` to
 the image's real width / height, then tune the pin and zone percentages against the image.
