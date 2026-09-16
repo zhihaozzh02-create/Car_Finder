@@ -195,6 +195,8 @@ const MODEL = {
    ========================================================= */
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
+/* 元素找不到就跳过，别让一处缺失把后面的接线全带崩 */
+const on = (sel, ev, fn) => { const el = $(sel); if (el) el.addEventListener(ev, fn); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const parkName = id => (CARPARKS[id] || ['?', '#888'])[0];
@@ -903,7 +905,7 @@ function zoomMoved(box){
 /* ---------- 「是不是停在这」 ---------- */
 function askPark(park, bay){
   const spot = (state.spots || [])[bay];
-  if (!spot) return;
+  if (!spot || !$('#ask')) return;
   state.ask = { level: state.level, park, bay, ref: spot.ref };
   $('#ask-where').textContent = `${parkName(park)} · ${spot.ref}`;
   const el = $('#ask');
@@ -1008,9 +1010,9 @@ function openDetail(park){
 /* ---------- 接线 ---------- */
 loadParked();
 renderStage();
-$('#ask-yes').addEventListener('click', confirmPark);
-$('#ask-no').addEventListener('click', closeAsk);
-$('#ask').addEventListener('click', e => { if (e.target.id === 'ask') closeAsk(); });
+on('#ask-yes', 'click', confirmPark);
+on('#ask-no', 'click', closeAsk);
+on('#ask', 'click', e => { if (e.target.id === 'ask') closeAsk(); });
 addEventListener('keydown', e => { if (e.key === 'Escape' && state.ask) closeAsk(); });
 paintPick();
 $$('[data-pick]').forEach(b => b.addEventListener('click', () => setPick(b.dataset.pick)));
