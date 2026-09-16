@@ -12,15 +12,30 @@ const CONFIG = {
     L1: {
       name: 'Level 1',
       /* 我们自己画的平面图。w/h 是图纸坐标空间，下面所有坐标都在这个空间里。
-         mall = 商场本体轮廓（静态），anchors = 主力店，streets = 路名 */
-      plan: { w: 1750, h: 2650, mall: [], anchors: [], streets: [] },
+         mall / zones 是从商场官方图（reference/）里描出来的，不是手写的 */
+      plan: {
+        w: 1750, h: 2650,
+        /* 商场本体：静态，不可点 */
+        mall: [
+        '360.4 173.9,392.9 173.1,406.0 197.9,720.7 193.3,733.3 214.5,794.1 216.5,804.0 268.9,859.5 252.1,871.0 221.1,892.9 268.6,922.9 269.5,917.3 204.3,1042.8 218.8,1092.1 257.9,1105.5 314.9,1155.1 352.7,1161.4 386.3,1214.5 450.5,1212.6 467.5,1168.2 508.1,1158.9 866.9,1135.3 892.2,1119.2 1041.9,1154.0 1050.0,1346.0 1035.0,1362.6 1044.3,1363.2 1340.2,1061.5 1344.5,1054.2 1244.5,1018.1 1240.0,1007.1 1447.6,762.2 1450.1,762.5 1537.7,819.9 1563.1,818.6 1583.6,790.5 1590.1,789.0 1613.0,794.5 1631.1,819.1 1635.9,824.5 1657.1,995.5 1665.5,1005.3 1781.5,1254.5 1791.2,1251.5 2103.5,974.1 2107.5,971.9 2133.6,998.5 2159.2,998.9 2197.0,989.7 2240.0,957.0 2271.4,942.4 2270.6,919.8 2237.3,882.2 2239.2,868.0 2270.9,804.1 2238.4,796.8 2222.8,831.5 2194.9,831.9 2167.8,789.0 2157.0,751.7 2127.8,724.9 2133.2,703.8 2174.8,644.0 2147.6,541.5 2141.5,553.9 1973.9,638.4 1972.8,653.0 2007.9,744.5 1987.9,742.5 1942.9,670.5 1936.9,660.0 1841.0,744.5 1831.2,749.9 1810.0,714.9 1798.1,696.1 1748.4,667.1 1741.9,657.1 1616.5,614.8 1612.2,606.5 1585.9,571.3 1577.7,590.9 1493.9,644.2 1485.5,646.0 1371.0,577.1 1351.9,575.3 1197.3,618.1 1187.5,620.0 1134.0,569.1 1105.9,567.8 614.1,359.2 603.4,359.9 174.4',
+        '187.4 749.9,313.0 748.5,330.5 759.5,328.5 966.5,185.5 963.9,186.9 750.4',
+        '193.4 174.9,227.9 181.1,212.1 227.0,227.0 262.0,216.9 387.9,190.1 379.9,192.9 175.4'
+        ],
+        anchors: [], streets: []
+      },
+      /* 可点的停车区。name 用图上印的叫法，park 指向 CARPARKS 里的编号 */
+      zones: [
+        { park: 'P4', name: 'Aqua Carpark', pts: '263 199,267 203,354 205,349 562,349 607,356 609,352 758,352 746,345 743,185 742,186 678,191 684,216 684,219 676,218 650,186 650,188 434,223 436,232 432,233 206,258 205' },
+        { park: 'P5', name: 'Aqua Carpark', pts: '1208 611,1331 613,1363 641,1368 641,1428 700,1429 819,1175 820,1168 821,1167 828,1168 616,1173 612' },
+        { park: 'P6', name: 'Pink Carpark', pts: '1304 799,1313 803,1313 818,1324 822,1430 826,1431 1020,1427 1021,1426 1029,1359 1032,1358 1028,1297 1028,1296 1032,1213 1032,1203 1036,1202 1032,1141 1031,1140 1014,1131 1010,1133 984,1168 983,1171 824,1289 822,1290 810,1303 808' },
+        { park: 'P21', name: 'Green Carpark', pts: '189 1112,544 1115,545 1123,531 1126,531 1217,565 1220,563 1227,555 1229,555 1256,550 1260,549 1280,547 1663,575 1667,575 1763,561 1776,560 1797,542 1798,539 1802,540 2009,262 2003,244 2002,240 1996,186 1146' },
+        { park: 'P11', name: 'Purple Carpark', pts: '866 1456,1185 1458,1190 1471,1191 1614,1022 1613,998 1616,997 1626,996 1616,929 1616,928 1620,923 1616,891 1616,881 1610,881 1511,860 1506,859 1461' }
+      ],
       /* GPS 标定：在场地里站两个认得出来的位置各记一次经纬度，
          把那两点的图纸坐标和经纬度填进来，就能把实时定位画到图上。
          两个点越远越准，别选在一条很短的线上。留 null = 不画「你在这」 */
       geo: { a: { x: null, y: null, lat: null, lon: null },
              b: { x: null, y: null, lat: null, lon: null } },
-      /* 可点击的停车区。park 指向 CARPARKS 里的编号，pts 是 "x y,x y,..." */
-      zones: [],
       car:  { carpark: 'P6' }   // 不填 x/y 就落在所属区域的中心；要微调就加 x / y（底图宽高的百分比）
     },
     L2: {
@@ -457,12 +472,13 @@ function renderLevel(lv, drop){
     const isMine = z.park === mine;
     const [lx, ly] = centroid(z.poly);
     const label = (z.name || parkName(z.park)).replace(/\s*Carpark$/i, '');
+    const ly2 = isMine ? ly - 62 * u : ly;   // 自己那块要给车标让位
     return `<g class="pz${isMine ? ' is-mine' : ''}" role="button" tabindex="0" ` +
       `data-park="${esc(z.park)}" aria-label="${esc(parkName(z.park))}` +
       `${isMine ? ', where your car is' : ''}. Open this car park">` +
       `<polygon class="pz-fill" points="${d}" style="--pc:${parkFill(z.park)}" ` +
         `stroke-width="${(3 * u).toFixed(1)}"/>` +
-      `<text class="pz-tag" x="${lx.toFixed(0)}" y="${ly.toFixed(0)}" text-anchor="middle" ` +
+      `<text class="pz-tag" x="${lx.toFixed(0)}" y="${ly2.toFixed(0)}" text-anchor="middle" ` +
         `dominant-baseline="central" font-size="${(24 * u).toFixed(1)}" ` +
         `stroke-width="${(4 * u).toFixed(1)}">${esc(label)}</text>` +
     `</g>`;
@@ -476,19 +492,22 @@ function renderLevel(lv, drop){
     if (at && at.x > -P.w && at.x < P.w * 2 && at.y > -P.h && at.y < P.h * 2){
       const acc = Math.max(8 * u, (c.accuracy || 30) * at.perMetre);
       here =
-        `<g class="hereme" transform="translate(${at.x.toFixed(0)},${at.y.toFixed(0)})">` +
+        `<g transform="translate(${at.x.toFixed(0)},${at.y.toFixed(0)})"><g class="hereme">` +
           `<circle class="here-acc" r="${acc.toFixed(0)}"/>` +
           `<circle class="here-dot" r="${(11 * u).toFixed(1)}" stroke-width="${(4 * u).toFixed(1)}"/>` +
-        `</g>`;
+        `</g></g>`;
     }
   }
 
+  /* 外层负责定位、内层负责动画：CSS 的 transform 会盖掉 SVG 的 transform 属性，
+     写在同一个元素上车标会被打回原点 */
   const marker = !car ? '' :
-    `<g class="carmark${drop ? ' drop' : ''}" ` +
-      `transform="translate(${car[0].toFixed(0)},${car[1].toFixed(0)})">` +
-      `<circle class="carmark-halo" r="${(46 * u).toFixed(1)}"/>` +
-      `<circle class="carmark-dot" r="${(15 * u).toFixed(1)}" stroke-width="${(5 * u).toFixed(1)}"/>` +
-      `<circle class="carmark-eye" r="${(4.5 * u).toFixed(1)}"/>` +
+    `<g transform="translate(${car[0].toFixed(0)},${car[1].toFixed(0)})">` +
+      `<g class="carmark${drop ? ' drop' : ''}">` +
+        `<circle class="carmark-halo" r="${(46 * u).toFixed(1)}"/>` +
+        `<circle class="carmark-dot" r="${(15 * u).toFixed(1)}" stroke-width="${(5 * u).toFixed(1)}"/>` +
+        `<circle class="carmark-eye" r="${(4.5 * u).toFixed(1)}"/>` +
+      `</g>` +
     `</g>`;
 
   const pad = 34 * u;
