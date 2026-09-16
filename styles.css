@@ -1,0 +1,237 @@
+/* =========================================================
+   Find my car – Garden City
+   样式表。所有颜色 / 间距 / 字号都走下面的 token，改主题只改 :root
+   ========================================================= */
+
+:root{
+  /* 表面 */
+  --paper:#f6f4f0;          /* 页面底色 */
+  --card:#ffffff;           /* 卡片 / 画布 */
+  --sunk:#eceae4;           /* 占位图、缩略图的底 */
+  /* 墨色 */
+  --ink:#131416;
+  --ink-2:#6d6f72;
+  --ink-3:#9b9da0;
+  /* 线 */
+  --rule:#131416;                      /* 重线：标题分隔 */
+  --hair:rgba(19,20,22,.16);           /* 细线：卡片描边 */
+  --lift:rgba(19,20,22,.10);           /* 硬投影 */
+  /* 语义色：红只代表「你的车」 */
+  --red:#e3261b;
+  --on-red:#ffffff;
+  /* 3D 模型：商场建筑的两个面 + 描边 */
+  --bldg:#eae5da;
+  --bldg-side:#cdc6b7;
+  --model-line:#131416;
+  /* 尺度 */
+  --s1:4px;  --s2:8px;  --s3:12px; --s4:16px;
+  --s5:24px; --s6:32px; --s7:48px;
+  --r:3px;                              /* 圆角：几乎直角，保留包豪斯感 */
+  --tap:52px;                           /* 最小点击高度 */
+}
+
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0b0c0d; --card:#17191b; --sunk:#202325;
+    --ink:#f3f2f0; --ink-2:#9ea0a3; --ink-3:#6f7275;
+    --rule:#f3f2f0; --hair:rgba(255,255,255,.18); --lift:rgba(0,0,0,.55);
+    --bldg:#4a4e52; --bldg-side:#35383b; --model-line:rgba(255,255,255,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0b0c0d; --card:#17191b; --sunk:#202325;
+  --ink:#f3f2f0; --ink-2:#9ea0a3; --ink-3:#6f7275;
+  --rule:#f3f2f0; --hair:rgba(255,255,255,.18); --lift:rgba(0,0,0,.55);
+  --bldg:#4a4e52; --bldg-side:#35383b; --model-line:rgba(255,255,255,.6);
+}
+
+/* ---------- 基础 ---------- */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:Jost,Futura,"Century Gothic","Trebuchet MS",system-ui,sans-serif;
+  font-size:17px;
+  line-height:1.4;
+}
+button{font:inherit;color:inherit;background:none;border:0;margin:0;padding:0;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+img{display:block;max-width:100%}
+[hidden]{display:none !important}
+:focus-visible{outline:3px solid var(--red);outline-offset:3px;border-radius:var(--r)}
+
+/* 只给读屏软件看的文字 */
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;
+  overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+.app{
+  max-width:480px;
+  margin:0 auto;
+  min-height:100dvh;
+  padding:0 var(--s4) calc(var(--s6) + env(safe-area-inset-bottom));
+}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  min-height:60px;padding:var(--s3) 0;
+  border-bottom:2px solid var(--rule);
+}
+.back{display:inline-flex;align-items:center;gap:var(--s2);height:44px;padding-right:var(--s2);
+  font-size:16px;font-weight:500}
+.back::before{content:"";width:0;height:0;flex:none;
+  border-top:8px solid transparent;border-bottom:8px solid transparent;border-right:13px solid currentColor}
+
+/* ---------- 标题 ---------- */
+.lead{font-size:27px;line-height:1.15;font-weight:700;letter-spacing:-.015em;margin:var(--s5) 0 var(--s4)}
+.pagehead{display:flex;align-items:center;gap:var(--s3);margin:var(--s5) 0 var(--s1)}
+.pagehead .lead{margin:0}
+.swatch{width:19px;height:19px;flex:none;border:2px solid var(--rule)}
+.sub{margin:0 0 var(--s4);font-size:15px;color:var(--ink-2)}
+.note{margin:var(--s3) 0 0;font-size:14px;color:var(--ink-2)}
+
+/* ---------- 3D 楼层模型：首屏的全部内容 ---------- */
+/* 首屏没有顶栏 / 标题 / 说明，两块楼板在视口里居中 */
+#home.is-on{
+  min-height:calc(100dvh - var(--s6));
+  display:grid;
+  align-content:center;
+  align-content:safe center;   /* 视口太矮时不要把楼板挤出屏幕顶上 */
+}
+.decks{display:grid;gap:var(--s5)}
+
+/* 一块楼板 = 一个按钮：左边 L1 / L2 标签，右边结构图 */
+.deck{
+  display:flex;align-items:center;gap:var(--s4);
+  width:100%;padding:var(--s2) 0;
+  border-radius:var(--r);
+  transition:transform .28s cubic-bezier(.2,.75,.25,1),opacity .3s;
+}
+.deck-tag{flex:none;width:4.4rem;text-align:right}
+.deck-tag b{display:block;font-size:40px;font-weight:700;line-height:1;letter-spacing:-.045em}
+.deck-tag small{display:block;margin-top:var(--s1);font-size:13px;color:var(--ink-2)}
+.deck-tag::after{content:"";display:block;width:40px;height:3px;
+  margin:var(--s2) 0 0 auto;background:var(--ink);transition:background .2s}
+
+.deck-art{flex:1;min-width:0}
+.deck-art svg{display:block;width:100%;height:auto}
+.deck .top,.deck .wall{stroke:var(--model-line);stroke-width:.9;stroke-linejoin:round;
+  vector-effect:non-scaling-stroke}
+
+.deck:hover,.deck:focus-visible{transform:translateY(-9px)}
+.deck:hover .deck-tag::after,.deck:focus-visible .deck-tag::after{background:var(--red)}
+.deck:focus-visible .deck-tag b{color:var(--red)}
+.deck.is-picked{transform:translateY(-16px)}
+.deck.is-picked .deck-tag b{color:var(--red)}
+.deck.is-picked .deck-tag::after{background:var(--red)}
+.deck.is-dimmed{opacity:.2}
+
+/* ---------- 平面图 ---------- */
+.planbox{
+  position:relative;
+  aspect-ratio:4/3;
+  background:var(--sunk);
+  border:1.5px solid var(--hair);
+  border-radius:var(--r);
+  box-shadow:3px 3px 0 var(--lift);
+  overflow:hidden;
+}
+.planbox > img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+.planbox .empty{
+  position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:var(--s3);font-size:14px;color:var(--ink-3);
+  background-image:linear-gradient(var(--card) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--card) 1px,transparent 1px);
+  background-size:26px 26px;
+}
+.planbox .empty small{font-size:12px}
+.overlay{position:absolute;inset:0}
+
+.zone{position:absolute;border:3px solid var(--red);border-radius:2px}
+.zone b{position:absolute;left:-3px;top:100%;margin-top:3px;
+  background:var(--red);color:var(--on-red);font-size:12px;font-weight:700;
+  padding:2px var(--s2);white-space:nowrap}
+
+/* 图钉 */
+.pin{position:absolute;width:0;height:0;z-index:2}
+.pin-body{position:absolute;left:0;top:0;transform:translate(-50%,-100%);
+  display:flex;flex-direction:column;align-items:center}
+.pin-body[role=button]{cursor:pointer}
+.pin-head{width:26px;height:26px;border-radius:50%;background:var(--red);
+  border:3px solid var(--ink);display:grid;place-items:center}
+.pin-head::after{content:"";width:7px;height:7px;background:var(--on-red)}
+.pin-stem{width:0;height:0;margin-top:-2px;
+  border-left:6px solid transparent;border-right:6px solid transparent;border-top:11px solid var(--ink)}
+
+.callout{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:var(--s2);width:214px;padding:var(--s2);
+  background:var(--card);border:2px solid var(--ink);border-radius:var(--r);text-align:left}
+.callout::after{content:"";position:absolute;left:50%;bottom:-8px;width:11px;height:11px;
+  background:var(--card);border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);
+  transform:translateX(-50%) rotate(45deg)}
+.callout.tight{width:auto;white-space:nowrap;padding:var(--s1) var(--s3)}
+.callout.to-right{left:0;transform:none}
+.callout.to-right::after{left:7px;transform:rotate(45deg)}
+.callout.to-left{left:auto;right:0;transform:none}
+.callout.to-left::after{left:auto;right:7px;transform:rotate(45deg)}
+.callout b{display:block;font-size:14.5px;font-weight:600;line-height:1.2}
+.callout small{display:block;font-size:12px;color:var(--ink-2)}
+
+.thumb{flex:none;width:46px;height:46px;display:grid;place-items:center;overflow:hidden;
+  background:var(--sunk);border:1.5px solid var(--hair);border-radius:2px;
+  font-size:10px;line-height:1.15;color:var(--ink-3);text-align:center;padding:2px}
+.thumb img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- 层切换 ---------- */
+.seg{display:flex;border:2px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.seg button{width:48px;height:36px;font-size:15px;font-weight:700}
+.seg button + button{border-left:2px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+/* ---------- 提示列表 ---------- */
+.tips{list-style:none;margin:var(--s5) 0 0;padding:0;border-top:2px solid var(--rule)}
+.tips li{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) 0;border-bottom:1px solid var(--hair)}
+.tips .thumb{width:58px;height:58px}
+.tips b{display:block;font-size:16px;font-weight:600}
+.tips small{display:block;font-size:13px;color:var(--ink-2)}
+
+/* ---------- 主按钮 ---------- */
+.primary{display:block;width:100%;min-height:var(--tap);margin-top:var(--s5);
+  padding:var(--s3);background:var(--ink);color:var(--paper);
+  font-size:17px;font-weight:700;border-radius:var(--r);
+  transition:background .15s,transform .1s}
+.primary:active{background:var(--red);color:var(--on-red);transform:translateY(1px)}
+
+/* ---------- 定位中 ---------- */
+.locating{position:fixed;inset:0;z-index:20;display:grid;place-content:center;justify-items:center;
+  gap:var(--s5);background:var(--paper);opacity:0;transition:opacity .25s ease}
+.locating.is-on{opacity:1}
+.locating p{margin:0;font-size:18px;font-weight:500}
+.beacon{width:34px;height:34px;border-radius:50%;background:var(--red);animation:beat 1s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(.68);opacity:.55}50%{transform:scale(1);opacity:1}}
+
+/* ---------- 换屏 ---------- */
+.screen{display:none}
+.screen.is-on{display:block}
+@keyframes enter-fwd{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+@keyframes enter-back{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+@keyframes plan-rise{from{opacity:0;transform:perspective(900px) rotateX(-18deg) scale(.94)}
+                     to{opacity:1;transform:none}}
+@keyframes stage-dive{to{opacity:0;transform:perspective(1000px) rotateX(22deg) scale(1.12)}}
+@keyframes fade-out{to{opacity:0}}
+@keyframes pin-drop{0%{transform:translate(-50%,-175%);opacity:0}
+                    70%{transform:translate(-50%,-92%);opacity:1}
+                    100%{transform:translate(-50%,-100%);opacity:1}}
+
+.screen.anim-fwd{animation:enter-fwd .34s cubic-bezier(.2,.75,.25,1) both}
+.screen.anim-back{animation:enter-back .26s ease-out both}
+.screen.anim-fwd .planbox{animation:plan-rise .48s cubic-bezier(.2,.75,.25,1) both;transform-origin:50% 100%}
+.pin-body.drop{animation:pin-drop .5s cubic-bezier(.2,.7,.3,1.15) both}
+
+#home.is-leaving .decks{animation:stage-dive .46s cubic-bezier(.45,0,.55,1) both;transform-origin:50% 50%}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}

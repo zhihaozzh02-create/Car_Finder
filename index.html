@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Find my car – Garden City</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== 屏 1：整屏只有两块楼板，点哪块选哪层 ===== -->
+  <!-- 标题只给读屏软件，视觉上不出现 -->
+  <section class="screen is-on" id="home" aria-labelledby="home-title">
+    <h1 class="sr-only" id="home-title" tabindex="-1">Which level did you park on?</h1>
+    <div class="decks" id="decks"></div>
+  </section>
+
+  <!-- ===== 屏 2：该层平面图 + 车的位置 ===== -->
+  <section class="screen" id="level" aria-labelledby="level-title">
+    <header class="topbar">
+      <button class="back" data-back="home">Back</button>
+      <div class="seg" role="group" aria-label="Switch level">
+        <button data-level="L1" aria-pressed="false">L1</button>
+        <button data-level="L2" aria-pressed="false">L2</button>
+      </div>
+    </header>
+    <div class="pagehead">
+      <i class="swatch" id="level-swatch"></i>
+      <h1 class="lead" id="level-title" tabindex="-1"></h1>
+    </div>
+    <p class="sub" id="level-sub"></p>
+    <div class="planbox" id="level-plan">
+      <img alt="" hidden>
+      <div class="empty"></div>
+      <div class="overlay" id="level-overlay"></div>
+    </div>
+    <p class="note" id="level-note"></p>
+  </section>
+
+  <!-- ===== 屏 3：停车场细节图 + 提示 ===== -->
+  <section class="screen" id="detail" aria-labelledby="detail-title">
+    <header class="topbar">
+      <button class="back" data-back="level">Back</button>
+    </header>
+    <div class="pagehead">
+      <i class="swatch" id="detail-swatch"></i>
+      <h1 class="lead" id="detail-title" tabindex="-1"></h1>
+    </div>
+    <p class="sub" id="detail-sub"></p>
+    <div class="planbox" id="detail-plan">
+      <img alt="" hidden>
+      <div class="empty"></div>
+      <div class="overlay" id="detail-overlay"></div>
+    </div>
+    <ul class="tips" id="detail-tips"></ul>
+    <button class="primary" data-back="home" data-reset="1">I found my car</button>
+  </section>
+
+  <div class="locating" id="locating" hidden role="status" aria-live="polite">
+    <div class="beacon"></div>
+    <p>Finding your car…</p>
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>

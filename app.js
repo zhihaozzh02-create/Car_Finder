@@ -1,0 +1,344 @@
+/* =========================================================
+   Find my car – Garden City
+   逻辑 + 数据。改内容只动下面两块：CONFIG 和 CARPARKS
+   ========================================================= */
+
+/* ---------- 1. 可配置内容 ---------- */
+const CONFIG = {
+  useRealGPS: false,    // true = 选层时向浏览器申请定位，只用来显示精度；pin 位置仍用下面的预设
+  findingDelay: 1100,   // "Finding your car…" 停留毫秒
+
+  levels: {
+    L1: {
+      name: 'Level 1',
+      plan: { image: '', aspect: '4 / 3' },          // 楼层平面图，空 = 显示占位格
+      car:  { carpark: 'P6', x: 62, y: 60,           // pin 在平面图上的位置（百分比，左上角 0,0）
+              zone: { x: 46, y: 42, w: 32, h: 27 } } // 红框圈出的停车场范围
+    },
+    L2: {
+      name: 'Level 2',
+      plan: { image: '', aspect: '4 / 3' },
+      car:  { carpark: 'P5', x: 72, y: 50,
+              zone: { x: 57, y: 33, w: 30, h: 25 } }
+    }
+  },
+
+  /* 每个停车场的细节图和提示，示例内容待替换 */
+  carparks: {
+    P6: {
+      detail: { image: '', aspect: '4 / 3', car: { x: 44, y: 58 } },
+      tips: [
+        { title: 'Nearby: Entry 1', note: 'Closest way into the centre', image: '', alt: 'Entry 1 photo' },
+        { title: 'Landmark: Coles', note: 'Your row is next to the Coles entrance', image: '', alt: 'Coles photo' }
+      ]
+    },
+    P5: {
+      detail: { image: '', aspect: '4 / 3', car: { x: 56, y: 62 } },
+      tips: [
+        { title: 'Nearby: Entry 3', note: 'Closest way into the centre', image: '', alt: 'Entry 3 photo' },
+        { title: 'Landmark: Kmart', note: 'Look for the Kmart sign', image: '', alt: 'Kmart photo' }
+      ]
+    }
+  }
+};
+
+/* ---------- 2. 停车场名字和颜色（和商场指示牌一致） ---------- */
+const CARPARKS = {
+  P1:  ['P1 Navy',         '#1B2A6B'],
+  P2:  ['P2 Blue',         '#2E5BD9'],
+  P3:  ['P3 Blue',         '#2E5BD9'],
+  P4:  ['P4 Aqua',         '#7FCFA6'],
+  P5:  ['P5 Aqua',         '#7FCFA6'],
+  P6:  ['P6 Pink',         '#E0457B'],
+  P7:  ['P7 Grey',         '#7C7C7C'],
+  P8:  ['P8 P9 Black',     '#1a1a1a'],
+  P10: ['P10 Violet',      '#B15CB5'],
+  P11: ['P11 Purple',      '#5B2D8E'],
+  P13: ['P13 White',       '#ffffff'],
+  P14: ['P14 Red',         '#D12B2B'],
+  P15: ['P15 P16 Orange',  '#F26B21'],
+  P17: ['P17 P18 Yellow',  '#F6C700'],
+  P19: ['P19 Maroon',      '#6E1B2E'],
+  P20: ['P20 Brown',       '#8B3A2F'],
+  P21: ['P21 Green',       '#6DBE2B'],
+  P22: ['P22 Olive',       '#3F5A2E']
+};
+
+/* ---------- 3. 中心结构：直接从指示牌照片描出来的多边形 ---------- */
+/*  坐标 = 牌子上的画面坐标（俯视 + 斜切已经画在形状里），范围 999 × 755。
+    一块图形可能包含两个停车场（AQUA = P4+P5，BLUE = P2+P3），和牌子一样。   */
+const CENTRE = {
+  w: 999, h: 755,
+  shapes: [
+    { id:'P20', park:'P20', pts:'187 0,216 24,114 33,91 10,186 1' },
+    { id:'B1', bldg:true, pts:'289 37,400 41,367 68,368 77,390 77,391 100,389 84,381 84,368 95,156 87,151 83,155 82,245 75,288 38' },
+    { id:'P19', park:'P19', pts:'151 110,214 114,230 127,131 136,107 114,150 111' },
+    { id:'P8', park:'P8', pts:'857 3,999 7,997 32,970 53,962 53,950 67,949 58,927 61,925 85,917 91,809 103,782 86,780 69,731 67,729 42,756 21,831 22,856 4' },
+    { id:'P15', park:'P15', pts:'76 210,96 216,147 257,43 265,40 285,3 255,0 235,75 211' },
+    { id:'P17', park:'P17', pts:'91 210,165 214,176 236,223 237,243 248,147 256,91 211' },
+    { id:'P11', park:'P11', pts:'274 198,396 202,378 217,257 215,169 212,169 207,273 199' },
+    { id:'P22', park:'P22', pts:'409 224,756 233,756 247,393 237,408 225' },
+    { id:'B2', bldg:true, pts:'839 233,977 236,976 249,975 243,966 243,898 288,795 298,771 284,779 278,777 268,708 267,672 293,614 292,615 281,532 279,512 294,273 288,89 304,43 268,241 252,245 247,261 249,274 239,817 249,838 234' },
+    { id:'P10', park:'P10', pts:'282 291,402 295,384 309,374 309,187 303,182 299,281 292' },
+    { id:'P7', park:'P7', pts:'727 269,774 270,779 274,769 274,726 307,514 301,532 283,613 285,612 295,679 296,710 272,726 270' },
+    { id:'P21', park:'P21', pts:'654 375,685 377,653 397,384 388,400 378,653 376' },
+    { id:'B3', bldg:true, pts:'734 378,805 380,805 392,832 393,824 403,825 413,866 413,869 400,882 394,959 397,888 442,786 451,772 446,615 441,597 454,502 451,501 459,494 461,494 445,479 444,497 442,513 430,512 421,414 418,385 440,291 438,303 429,302 420,261 412,326 398,337 390,700 402,733 379' },
+    { id:'P13', park:'P13', pts:'422 421,520 425,489 444,395 441,421 422' },
+    { id:'P14', park:'P14', pts:'166 430,191 444,188 448,112 453,92 437,165 431' },
+    { id:'P6', park:'P6', pts:'622 445,740 449,740 468,730 472,726 458,610 454,621 446' },
+    { id:'AQUA', park:'P4', pts:'808 485,969 489,969 494,959 495,954 504,940 504,879 545,762 554,753 548,714 547,693 561,505 553,574 506,713 511,731 499,781 501,807 486' },
+    { id:'BLUE', park:'P2', pts:'816 594,942 598,941 614,941 605,932 604,869 641,763 649,711 643,693 655,509 647,540 627,672 633,729 597,806 600,815 595' },
+    { id:'P1', park:'P1', pts:'749 698,909 704,908 720,858 748,744 755,698 745,698 729,748 699' }  ]
+};
+
+/* ---------- 4. 楼层模型的摆放 ---------- */
+/*  两块楼板的间距、L1 / L2 标签的字号都在 styles.css 里（.decks / .deck-tag）  */
+const MODEL = {
+  squash: 0.90,   // 楼板纵向压扁比例（1 = 和牌子完全同比例）
+  depth:  13,     // 楼板厚度
+  pad:    16      // 画布留白
+};
+
+/* =========================================================
+   以下是逻辑
+   ========================================================= */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const parkName = id => (CARPARKS[id] || ['?', '#888'])[0];
+const parkFill = id => (CARPARKS[id] || ['?', '#888'])[1];
+
+const state = { level: 'L1', gps: null, busy: false };
+
+/* 由本色算出侧面的深浅：太深的颜色改成往亮里混，免得糊成一片 */
+function sideColour(hex, amount){
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const isDark = (0.299*r + 0.587*g + 0.114*b) / 255 < 0.3;
+  const target = isDark ? 255 : 0, k = isDark ? amount * 0.8 : amount;
+  const mix = v => Math.round(v + (target - v) * k);
+  return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+}
+
+/* 把一块多边形画成有厚度的楼板：先画朝向观众的侧墙，再盖上顶面 */
+function slab(pts, topFill, sideFill){
+  let area = 0;
+  for (let i = 0; i < pts.length; i++){
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    area += a[0]*b[1] - b[0]*a[1];
+  }
+  const ring = area < 0 ? pts.slice().reverse() : pts;   // 统一绕向，侧墙判断才准
+
+  const walls = [];
+  for (let i = 0; i < ring.length; i++){
+    const a = ring[i], b = ring[(i + 1) % ring.length];
+    if (b[0] - a[0] < 0) walls.push([a, b]);             // 这条边朝着观众，要画墙
+  }
+  walls.sort((u, v) => (u[0][1] + u[1][1]) - (v[0][1] + v[1][1]));
+
+  let out = '';
+  for (const [a, b] of walls){
+    out += `<polygon class="wall" points="${a[0]},${a[1]} ${b[0]},${b[1]} ` +
+           `${b[0]},${b[1] + MODEL.depth} ${a[0]},${a[1] + MODEL.depth}" fill="${sideFill}"/>`;
+  }
+  out += `<polygon class="top" points="${ring.map(p => p.join(',')).join(' ')}" fill="${topFill}"/>`;
+  return out;
+}
+
+/* 画一层楼板：整份中心结构纵向压扁 */
+function deck(){
+  const shapes = CENTRE.shapes.map(s => ({
+    ...s,
+    pts: s.pts.split(',').map(p => {
+      const [x, y] = p.split(' ').map(Number);
+      return [x, +(y * MODEL.squash).toFixed(1)];
+    })
+  }));
+  shapes.sort((a, b) => Math.max(...a.pts.map(p => p[1])) - Math.max(...b.pts.map(p => p[1])));
+
+  return shapes.map(s => s.bldg
+    ? slab(s.pts, 'var(--bldg)', 'var(--bldg-side)')
+    : slab(s.pts, parkFill(s.park), sideColour(parkFill(s.park), 0.3))
+  ).join('');
+}
+
+/* 屏 1：两块可点的楼板。楼板本身就是按钮，没有别的控件 */
+function renderStage(){
+  const plateH = CENTRE.h * MODEL.squash + MODEL.depth;
+  const vb = [-MODEL.pad, -MODEL.pad, CENTRE.w + MODEL.pad * 2, plateH + MODEL.pad * 2].join(' ');
+  const art = deck();   // 两层的结构一样，画一次复用
+
+  $('#decks').innerHTML = ['L2', 'L1'].map(level =>
+    `<button class="deck" type="button" data-level="${level}" ` +
+      `aria-label="${esc(CONFIG.levels[level].name)}, choose this level">` +
+      `<span class="deck-tag" aria-hidden="true"><b>${level}</b>` +
+        `<small>${esc(CONFIG.levels[level].name)}</small></span>` +
+      `<span class="deck-art">` +
+        `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" ` +
+          `focusable="false">${art}</svg>` +
+      `</span>` +
+    `</button>`
+  ).join('');
+
+  $$('.deck').forEach(b => b.addEventListener('click', () => pickLevel(b.dataset.level, b)));
+}
+
+/* ---------- 平面图 ---------- */
+function setPlan(box, src, emptyText){
+  const img = box.querySelector('img'), empty = box.querySelector('.empty');
+  if (src){
+    img.src = src;
+    img.alt = emptyText;
+    img.hidden = false;
+    empty.hidden = true;
+  } else {
+    img.removeAttribute('src'); img.hidden = true;
+    empty.hidden = false;
+    empty.innerHTML = `<span>${esc(emptyText)}</span><small>image coming</small>`;
+  }
+}
+
+function thumb(src, alt){
+  return `<div class="thumb">${src ? `<img src="${esc(src)}" alt="">` : esc(alt || 'photo')}</div>`;
+}
+
+function pin(x, y, o){
+  const wrap = document.createElement('div');
+  wrap.className = 'pin';
+  wrap.style.cssText = `left:${x}%;top:${y}%`;
+
+  const body = document.createElement('div');
+  body.className = 'pin-body' + (o.drop ? ' drop' : '');
+  if (o.onTap){
+    body.setAttribute('role', 'button');
+    body.tabIndex = 0;
+    body.setAttribute('aria-label', `${o.title}. Open car park map`);
+    body.addEventListener('click', o.onTap);
+    body.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); o.onTap(); }
+    });
+  }
+  const side = (x < 35 ? ' to-right' : x > 65 ? ' to-left' : '') + (o.thumbAlt === undefined ? ' tight' : '');
+  body.innerHTML =
+    `<div class="callout${side}">${o.thumbAlt !== undefined ? thumb(o.thumb, o.thumbAlt) : ''}` +
+    `<div><b>${esc(o.title)}</b>${o.note ? `<small>${esc(o.note)}</small>` : ''}</div></div>` +
+    `<div class="pin-head"></div><div class="pin-stem"></div>`;
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function renderLevel(lv, drop){
+  state.level = lv;
+  const L = CONFIG.levels[lv], id = L.car.carpark, info = CONFIG.carparks[id];
+
+  $('#level-swatch').style.background = parkFill(id);
+  $('#level-title').textContent = parkName(id);
+  $('#level-sub').textContent = `Your car is here, ${L.name}` +
+    (state.gps ? ` · GPS accuracy ±${Math.round(state.gps.coords.accuracy)} m` : '');
+
+  const box = $('#level-plan');
+  box.style.aspectRatio = L.plan.aspect;
+  setPlan(box, L.plan.image, `${L.name} map`);
+
+  const layer = $('#level-overlay');
+  layer.innerHTML = '';
+  if (L.car.zone){
+    const z = L.car.zone, el = document.createElement('div');
+    el.className = 'zone';
+    el.style.cssText = `left:${z.x}%;top:${z.y}%;width:${z.w}%;height:${z.h}%`;
+    el.innerHTML = `<b>${esc(parkName(id))}</b>`;
+    layer.appendChild(el);
+  }
+  const first = info.tips[0] || { title: parkName(id), image: '', alt: 'photo' };
+  layer.appendChild(pin(L.car.x, L.car.y, {
+    title: first.title, note: 'Car park map',
+    thumb: first.image, thumbAlt: first.alt, drop, onTap: openDetail
+  }));
+
+  $('#level-note').textContent = `Tap the pin for the ${parkName(id)} map.`;
+  $$('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.level === lv)));
+}
+
+function renderDetail(){
+  const L = CONFIG.levels[state.level], id = L.car.carpark, info = CONFIG.carparks[id];
+
+  $('#detail-swatch').style.background = parkFill(id);
+  $('#detail-title').textContent = parkName(id);
+  $('#detail-sub').textContent = `${L.name}, car park map`;
+
+  const box = $('#detail-plan');
+  box.style.aspectRatio = info.detail.aspect;
+  setPlan(box, info.detail.image, `${parkName(id)} car park map`);
+
+  const layer = $('#detail-overlay');
+  layer.innerHTML = '';
+  layer.appendChild(pin(info.detail.car.x, info.detail.car.y, { title: 'Your car', drop: true }));
+
+  $('#detail-tips').innerHTML = info.tips.map(t =>
+    `<li>${thumb(t.image, t.alt)}<div><b>${esc(t.title)}</b><small>${esc(t.note)}</small></div></li>`
+  ).join('');
+}
+
+/* ---------- 换屏 ---------- */
+function show(id, dir){
+  $$('.screen').forEach(s => {
+    s.classList.toggle('is-on', s.id === id);
+    s.classList.remove('anim-fwd', 'anim-back');
+  });
+  const el = document.getElementById(id);
+  if (dir){ void el.offsetWidth; el.classList.add(dir === 'back' ? 'anim-back' : 'anim-fwd'); }
+  window.scrollTo(0, 0);
+  const h = el.querySelector('h1');
+  if (h) h.focus({ preventScroll: true });
+}
+
+function showFinding(on){
+  const el = $('#locating');
+  if (on){ el.hidden = false; void el.offsetWidth; el.classList.add('is-on'); }
+  else { el.classList.remove('is-on'); setTimeout(() => { el.hidden = true; }, 280); }
+}
+
+function locate(){
+  return new Promise(res => {
+    if (!CONFIG.useRealGPS || !navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res(p), () => res(null),
+      { enableHighAccuracy: true, timeout: 4000 });
+  });
+}
+
+/* 点楼板 → 该层抬起、另一层淡出 → 定位 → 平面图立起来 */
+async function pickLevel(lv, node){
+  if (state.busy) return;
+  state.busy = true;
+
+  $$('.deck').forEach(g => g.classList.add(g === node ? 'is-picked' : 'is-dimmed'));
+  $('#home').classList.add('is-leaving');
+
+  const ready = Promise.all([locate(), wait(CONFIG.findingDelay)]);
+  await wait(230);
+  showFinding(true);
+  const [pos] = await ready;
+
+  state.gps = pos;
+  renderLevel(lv, true);
+  show('level', 'fwd');
+  showFinding(false);
+
+  $('#home').classList.remove('is-leaving');
+  $$('.deck').forEach(g => g.classList.remove('is-picked', 'is-dimmed'));
+  state.busy = false;
+}
+
+function openDetail(){
+  renderDetail();
+  show('detail', 'fwd');
+}
+
+/* ---------- 接线 ---------- */
+renderStage();
+$$('.seg button').forEach(b => b.addEventListener('click', () => renderLevel(b.dataset.level, true)));
+$$('[data-back]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.reset) state.gps = null;
+  show(b.dataset.back, 'back');
+}));
