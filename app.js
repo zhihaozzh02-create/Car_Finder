@@ -13,16 +13,16 @@ const CONFIG = {
       name: 'Level 1',
       /* 静态底图：商场官方楼层图，透视矫正 + 去色偏后的版本。w/h 是图片像素尺寸，
          zones 的坐标就在这个像素空间里 */
-      plan: { image: '', w: 0, h: 0 },
+      plan: { image: 'images/L1-plan.jpg', w: 1750, h: 2650 },
       /* 可点击的停车区。park 指向 CARPARKS 里的编号，pts 是 "x y,x y,..." */
       zones: [],
-      car:  { carpark: 'P6', x: 62, y: 60 }   // pin 位置，底图宽高的百分比；不填就落在所属区域的中心
+      car:  { carpark: 'P6' }   // 不填 x/y 就落在所属区域的中心；要微调就加 x / y（底图宽高的百分比）
     },
     L2: {
       name: 'Level 2',
-      plan: { image: '', w: 0, h: 0 },
+      plan: { image: 'images/L2-plan.jpg', w: 1100, h: 1676 },
       zones: [],
-      car:  { carpark: 'P10', x: 72, y: 50 }
+      car:  { carpark: 'P10' }
     }
   },
 
@@ -387,7 +387,7 @@ function renderLevel(lv, drop){
   const zones = L.zones || [];
 
   /* 还没放楼层图时，退回原来的占位格子 */
-  if (!L.plan.image || !zones.length){
+  if (!L.plan.image){
     box.classList.remove('is-plan');
     box.style.aspectRatio = '4 / 3';
     setPlan(box, '', `${L.name} map`);
@@ -403,9 +403,9 @@ function renderLevel(lv, drop){
   const u = L.plan.w / 1000;        // 底图分辨率不同，尺寸都按这个单位缩放
   const parsed = zones.map(z => ({ ...z, poly: parseZone(z.pts) }));
   const my = parsed.find(z => z.park === mine);
-  const car = L.car.x != null && L.car.y != null
+  const car = (L.car.x != null && L.car.y != null)
     ? [L.car.x / 100 * L.plan.w, L.car.y / 100 * L.plan.h]
-    : (my ? centroid(my.poly) : [L.plan.w / 2, L.plan.h / 2]);
+    : (my ? centroid(my.poly) : null);
 
   const body = parsed.map(z => {
     const d = z.poly.map(p => p.join(',')).join(' ');
@@ -422,9 +422,9 @@ function renderLevel(lv, drop){
     `</g>`;
   }).join('');
 
-  const px = car[0].toFixed(0), py = car[1].toFixed(0);
-  const marker =
-    `<g class="carmark${drop ? ' drop' : ''}" transform="translate(${px},${py})">` +
+  const marker = !car ? '' :
+    `<g class="carmark${drop ? ' drop' : ''}" ` +
+      `transform="translate(${car[0].toFixed(0)},${car[1].toFixed(0)})">` +
       `<circle class="carmark-halo" r="${(46 * u).toFixed(1)}"/>` +
       `<circle class="carmark-dot" r="${(15 * u).toFixed(1)}" ` +
         `stroke-width="${(5 * u).toFixed(1)}"/>` +
@@ -447,9 +447,10 @@ function renderLevel(lv, drop){
     });
   });
 
-  $('#level-note').textContent = my
-    ? `Your car is in the ${parkName(mine)}. Tap any car park to see it.`
-    : 'Tap a car park to see it.';
+  $('#level-note').textContent = !zones.length
+    ? `${L.name} plan. Car park zones coming.`
+    : (my ? `Your car is in the ${parkName(mine)}. Tap any car park to see it.`
+          : 'Tap a car park to see it.');
 }
 
 function renderDetail(){
