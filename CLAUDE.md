@@ -29,24 +29,38 @@ No build step, no dependencies - open `index.html` in a browser.
    `useRealGPS` is `false` by default.
 2. `CARPARKS` - each car park's display name and sign colour. Used for the titles, the colour
    swatch and the model.
-3. `CENTRE` - the traced outlines plus `plate`, the floor outline. **These are not hand-authored**:
-   each shape was extracted from `images/reference-sign.jpg` by flood-filling the sign's colour
-   regions and simplifying the contour, so the silhouettes (the notches on P8/P9, the wedges on
-   P15-P18, the stepped aqua and blue bands) match the real sign. `plate` is the convex hull of
-   every shape, offset outward by 34. Coordinates are already-projected picture coordinates in a
+3. `CENTRE` - the traced outlines. Each shape carries **`lv`, the levels it exists on**
+   (`'L1'`, `'L2'`, `'L1 L2'` for both, `''` for not placed yet). This one field decides what each
+   level's floor looks like: the plate is the convex hull of whatever is on that level, rebuilt at
+   render time, so moving a car park between levels is a one-word edit. The current split comes
+   from `images/L1 floor.png` and `images/L2 floor.png`, and P20, P19, P8/P9, P4/P5, P2/P3, P1 and
+   the small north building are `''` - not on either floor yet, so they are not drawn.
+   The outlines themselves are **not hand-authored**: each shape was extracted from
+   `images/reference-sign.jpg` by flood-filling the sign's colour regions and simplifying the
+   contour, so the silhouettes (the notches on P8/P9, the wedges on P15-P18, the stepped aqua and
+   blue bands) match the real sign. Coordinates are already-projected picture coordinates in a
    999 x 755 box - there is no separate plan space. One shape can cover two car parks
    (`AQUA` = P4 + P5, `BLUE` = P2 + P3), exactly as the sign draws them.
 4. `MODEL` - how one level is built: `squash` (1 = the sign's exact proportions), `floor` (how thick
    the floor plate is), `zone` (how far a car park sits above the plate - keep it thin, they are
    painted areas), `tower` (how tall the shopping centre masses stand; raising them too far hides
-   the car parks behind them - 15 is about the limit), `margin`.
+   the car parks behind them - 15 is about the limit), `edge` (how far the plate reaches past the
+   content), `margin`.
+
+Keep `CONFIG.levels[*].car.carpark` pointing at a car park that is actually on that level, or the
+level screen will name a car park the model does not show.
 
 To swap in a floor plan: drop the file in `images/`, set `image: 'images/L1.png'`, set `aspect` to
 the image's real width / height, then tune the pin and zone percentages against the image.
 
 ## Rendering notes
-- **One floor plate = one level.** `deck()` draws the plate first, then the car park zones and the
-  building masses on top of it. This is load-bearing: floating slabs read as a stack of floors.
+- **One floor plate = one level.** `deck(lv)` takes only the shapes whose `lv` includes that level,
+  builds the plate from them with `floorOf()` (`hull()` + `grow()`), draws it, then lays that
+  level's car park zones and building masses on top. This is load-bearing: floating slabs read as a
+  stack of floors, which is what the client rejected.
+- Both levels share one viewBox *size* but are each centred on their own plate, so switching swaps
+  the content without the model jumping or changing scale. `setPick()` must re-render - the two
+  levels draw different things.
 - `slab(pts, lift, height, top, side)` raises a polygon by `lift` and extrudes it down by `height`.
   It normalises the winding, then draws a wall for every edge whose direction has a negative x -
   those are the faces turned toward the viewer - and lays the top face over them.
