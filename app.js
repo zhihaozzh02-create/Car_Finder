@@ -18,7 +18,7 @@ const CONFIG = {
     L2: {
       name: 'Level 2',
       plan: { image: '', aspect: '4 / 3' },
-      car:  { carpark: 'P5', x: 72, y: 50,
+      car:  { carpark: 'P10', x: 72, y: 50,
               zone: { x: 57, y: 33, w: 30, h: 25 } }
     }
   },
@@ -32,11 +32,11 @@ const CONFIG = {
         { title: 'Landmark: Coles', note: 'Your row is next to the Coles entrance', image: '', alt: 'Coles photo' }
       ]
     },
-    P5: {
+    P10: {
       detail: { image: '', aspect: '4 / 3', car: { x: 56, y: 62 } },
       tips: [
         { title: 'Nearby: Entry 3', note: 'Closest way into the centre', image: '', alt: 'Entry 3 photo' },
-        { title: 'Landmark: Kmart', note: 'Look for the Kmart sign', image: '', alt: 'Kmart photo' }
+        { title: 'Landmark: BIG W', note: 'Your row is behind BIG W', image: '', alt: 'BIG W photo' }
       ]
     }
   }
@@ -69,28 +69,26 @@ const CARPARKS = {
     一块图形可能包含两个停车场（AQUA = P4+P5，BLUE = P2+P3），和牌子一样。   */
 const CENTRE = {
   w: 999, h: 755,
-  /* 地板（模型底座）：所有内容的凸包外扩 34，一层就是这一整块 */
-  plate: '-35 231,67 -22,185 -34,858 -31,1035 -26,1003 499,974 623,936 743,868 781,741 789,687 777,94 482,65 459,-30 265',
   shapes: [
-    { id:'P20', park:'P20', pts:'187 0,216 24,114 33,91 10,186 1' },
-    { id:'B1', bldg:true, pts:'289 37,400 41,367 68,368 77,390 77,391 100,389 84,381 84,368 95,156 87,151 83,155 82,245 75,288 38' },
-    { id:'P19', park:'P19', pts:'151 110,214 114,230 127,131 136,107 114,150 111' },
-    { id:'P8', park:'P8', pts:'857 3,999 7,997 32,970 53,962 53,950 67,949 58,927 61,925 85,917 91,809 103,782 86,780 69,731 67,729 42,756 21,831 22,856 4' },
-    { id:'P15', park:'P15', pts:'76 210,96 216,147 257,43 265,40 285,3 255,0 235,75 211' },
-    { id:'P17', park:'P17', pts:'91 210,165 214,176 236,223 237,243 248,147 256,91 211' },
-    { id:'P11', park:'P11', pts:'274 198,396 202,378 217,257 215,169 212,169 207,273 199' },
-    { id:'P22', park:'P22', pts:'409 224,756 233,756 247,393 237,408 225' },
-    { id:'B2', bldg:true, pts:'839 233,977 236,976 249,975 243,966 243,898 288,795 298,771 284,779 278,777 268,708 267,672 293,614 292,615 281,532 279,512 294,273 288,89 304,43 268,241 252,245 247,261 249,274 239,817 249,838 234' },
-    { id:'P10', park:'P10', pts:'282 291,402 295,384 309,374 309,187 303,182 299,281 292' },
-    { id:'P7', park:'P7', pts:'727 269,774 270,779 274,769 274,726 307,514 301,532 283,613 285,612 295,679 296,710 272,726 270' },
-    { id:'P21', park:'P21', pts:'654 375,685 377,653 397,384 388,400 378,653 376' },
-    { id:'B3', bldg:true, pts:'734 378,805 380,805 392,832 393,824 403,825 413,866 413,869 400,882 394,959 397,888 442,786 451,772 446,615 441,597 454,502 451,501 459,494 461,494 445,479 444,497 442,513 430,512 421,414 418,385 440,291 438,303 429,302 420,261 412,326 398,337 390,700 402,733 379' },
-    { id:'P13', park:'P13', pts:'422 421,520 425,489 444,395 441,421 422' },
-    { id:'P14', park:'P14', pts:'166 430,191 444,188 448,112 453,92 437,165 431' },
-    { id:'P6', park:'P6', pts:'622 445,740 449,740 468,730 472,726 458,610 454,621 446' },
-    { id:'AQUA', park:'P4', pts:'808 485,969 489,969 494,959 495,954 504,940 504,879 545,762 554,753 548,714 547,693 561,505 553,574 506,713 511,731 499,781 501,807 486' },
-    { id:'BLUE', park:'P2', pts:'816 594,942 598,941 614,941 605,932 604,869 641,763 649,711 643,693 655,509 647,540 627,672 633,729 597,806 600,815 595' },
-    { id:'P1', park:'P1', pts:'749 698,909 704,908 720,858 748,744 755,698 745,698 729,748 699' }  ]
+    { id:'P20', lv:'', park:'P20', pts:'187 0,216 24,114 33,91 10,186 1' },
+    { id:'B1', lv:'', bldg:true, pts:'289 37,400 41,367 68,368 77,390 77,391 100,389 84,381 84,368 95,156 87,151 83,155 82,245 75,288 38' },
+    { id:'P19', lv:'', park:'P19', pts:'151 110,214 114,230 127,131 136,107 114,150 111' },
+    { id:'P8', lv:'', park:'P8', pts:'857 3,999 7,997 32,970 53,962 53,950 67,949 58,927 61,925 85,917 91,809 103,782 86,780 69,731 67,729 42,756 21,831 22,856 4' },
+    { id:'P15', lv:'L2', park:'P15', pts:'76 210,96 216,147 257,43 265,40 285,3 255,0 235,75 211' },
+    { id:'P17', lv:'L2', park:'P17', pts:'91 210,165 214,176 236,223 237,243 248,147 256,91 211' },
+    { id:'P11', lv:'L2', park:'P11', pts:'274 198,396 202,378 217,257 215,169 212,169 207,273 199' },
+    { id:'P22', lv:'L2', park:'P22', pts:'409 224,756 233,756 247,393 237,408 225' },
+    { id:'B2', lv:'L2', bldg:true, pts:'839 233,977 236,976 249,975 243,966 243,898 288,795 298,771 284,779 278,777 268,708 267,672 293,614 292,615 281,532 279,512 294,273 288,89 304,43 268,241 252,245 247,261 249,274 239,817 249,838 234' },
+    { id:'P10', lv:'L2', park:'P10', pts:'282 291,402 295,384 309,374 309,187 303,182 299,281 292' },
+    { id:'P7', lv:'L2', park:'P7', pts:'727 269,774 270,779 274,769 274,726 307,514 301,532 283,613 285,612 295,679 296,710 272,726 270' },
+    { id:'P21', lv:'L1', park:'P21', pts:'654 375,685 377,653 397,384 388,400 378,653 376' },
+    { id:'B3', lv:'L1', bldg:true, pts:'734 378,805 380,805 392,832 393,824 403,825 413,866 413,869 400,882 394,959 397,888 442,786 451,772 446,615 441,597 454,502 451,501 459,494 461,494 445,479 444,497 442,513 430,512 421,414 418,385 440,291 438,303 429,302 420,261 412,326 398,337 390,700 402,733 379' },
+    { id:'P13', lv:'L1', park:'P13', pts:'422 421,520 425,489 444,395 441,421 422' },
+    { id:'P14', lv:'L1', park:'P14', pts:'166 430,191 444,188 448,112 453,92 437,165 431' },
+    { id:'P6', lv:'L1', park:'P6', pts:'622 445,740 449,740 468,730 472,726 458,610 454,621 446' },
+    { id:'AQUA', lv:'', park:'P4', pts:'808 485,969 489,969 494,959 495,954 504,940 504,879 545,762 554,753 548,714 547,693 561,505 553,574 506,713 511,731 499,781 501,807 486' },
+    { id:'BLUE', lv:'', park:'P2', pts:'816 594,942 598,941 614,941 605,932 604,869 641,763 649,711 643,693 655,509 647,540 627,672 633,729 597,806 600,815 595' },
+    { id:'P1', lv:'', park:'P1', pts:'749 698,909 704,908 720,858 748,744 755,698 745,698 729,748 699' }  ]
 };
 
 /* ---------- 4. 楼层模型的摆放 ---------- */
@@ -100,6 +98,7 @@ const MODEL = {
   floor:  26,     // 地板本身的厚度 —— 这一整块就代表「一层」
   zone:    6,     // 停车场区域高出地板多少（薄薄一层，像铺在地上的色块）
   tower:  15,     // 商场楼从地板上立起多高（太高会挡住北边的停车场）
+  edge:   34,     // 地板比这一层的内容宽出多少
   margin: 18      // 画布留白
 };
 
@@ -157,6 +156,60 @@ const parsePts = str => str.split(',').map(p => {
   return [x, +(y * MODEL.squash).toFixed(1)];
 });
 
+/* 凸包：地板的外形跟着这一层实际有哪些块走，改分层不用手动重画地板 */
+function hull(pts){
+  const P = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (P.length < 3) return P;
+  const cross = (o, a, b) => (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
+  const half = arr => {
+    const h = [];
+    for (const q of arr){
+      while (h.length >= 2 && cross(h[h.length-2], h[h.length-1], q) <= 0) h.pop();
+      h.push(q);
+    }
+    return h;
+  };
+  return half(P).slice(0, -1).concat(half(P.slice().reverse()).slice(0, -1));
+}
+
+/* 把闭合多边形每条边向外推 m，再求相邻边交点 —— 等距外扩 */
+function grow(poly, m){
+  const n = poly.length, lines = [];
+  for (let i = 0; i < n; i++){
+    const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % n];
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    const nx = dy / L, ny = -dx / L;
+    lines.push([x1 + nx*m, y1 + ny*m, x2 + nx*m, y2 + ny*m]);
+  }
+  const out = [];
+  for (let i = 0; i < n; i++){
+    const [ax, ay, bx, by] = lines[(i - 1 + n) % n], [cx, cy, ex, ey] = lines[i];
+    const r1x = bx - ax, r1y = by - ay, r2x = ex - cx, r2y = ey - cy;
+    const den = r1x*r2y - r1y*r2x;
+    if (Math.abs(den) < 1e-9){ out.push([cx, cy]); continue; }
+    const t = ((cx - ax)*r2y - (cy - ay)*r2x) / den;
+    out.push([+(ax + r1x*t).toFixed(1), +(ay + r1y*t).toFixed(1)]);
+  }
+  return out;
+}
+
+const polyArea = p => Math.abs(p.reduce((a, q, i) => {
+  const r = p[(i + 1) % p.length];
+  return a + q[0]*r[1] - r[0]*q[1];
+}, 0)) / 2;
+
+/* 某一层有哪些块 */
+const shapesOn = lv => CENTRE.shapes.filter(s => s.lv.split(' ').includes(lv))
+  .map(s => ({ ...s, pts: parsePts(s.pts) }));
+
+/* 某一层的地板 */
+function floorOf(items){
+  const H = hull(items.flatMap(s => s.pts));
+  if (H.length < 3) return H;
+  const a = grow(H, MODEL.edge);
+  return polyArea(a) >= polyArea(H) ? a : grow(H, -MODEL.edge);
+}
+
 /* 侧面不用纯色，用一条上亮下暗的渐变 —— 哑光材质在顶光下就是这样 */
 function wallGrads(){
   const out = {}, defs = [];
@@ -188,14 +241,14 @@ const MODEL_DEFS =
 
 /* 画一层：一整块地板，停车场铺在地板上，商场楼从地板上立起来。
    整块地板就代表「一层」—— 不再是一摞悬空的板子 */
-function deck(){
+function deck(lv){
   const g = wallGrads();
+  const items = shapesOn(lv);
 
   let body = `<g filter="url(#drop-floor)">` +
-    slab(parsePts(CENTRE.plate), 0, MODEL.floor, 'var(--floor)', 'url(#w-floor)') +
+    slab(floorOf(items), 0, MODEL.floor, 'var(--floor)', 'url(#w-floor)') +
   `</g>`;
 
-  const items = CENTRE.shapes.map(s => ({ ...s, pts: parsePts(s.pts) }));
   items.sort((a, b) => Math.max(...a.pts.map(p => p[1])) - Math.max(...b.pts.map(p => p[1])));
 
   for (const s of items){
@@ -210,21 +263,28 @@ function deck(){
 
 /* 屏 1：一次只画一层。L1 / L2 只是换个名字——同一座停车楼，两层轮廓本来就一样 */
 function renderStage(){
-  const plate = parsePts(CENTRE.plate);
-  const xs = plate.map(p => p[0]), ys = plate.map(p => p[1]);
-  const tops = CENTRE.shapes.filter(s => s.bldg)
-    .flatMap(s => parsePts(s.pts).map(p => p[1] - MODEL.tower));
+  /* 每层的地板各自居中，但两层共用同一个尺寸 —— 切换时不会一大一小 */
+  const boxes = Object.keys(CONFIG.levels).map(k => {
+    const items = shapesOn(k), pl = floorOf(items);
+    const tops = items.filter(s => s.bldg).flatMap(s => s.pts.map(p => p[1] - MODEL.tower));
+    const xs = pl.map(p => p[0]), ys = pl.map(p => p[1]);
+    return { k,
+      x0: Math.min(...xs), x1: Math.max(...xs),
+      y0: Math.min(...ys, ...tops), y1: Math.max(...ys) + MODEL.floor };
+  });
   const m = MODEL.margin;
-  const x0 = Math.min(...xs) - m, x1 = Math.max(...xs) + m;
-  const y0 = Math.min(...ys, ...tops) - m, y1 = Math.max(...ys) + MODEL.floor + m;
-  const vb = [x0, y0, x1 - x0, y1 - y0].map(n => n.toFixed(1)).join(' ');
+  const w = Math.max(...boxes.map(b => b.x1 - b.x0)) + m * 2;
+  const h = Math.max(...boxes.map(b => b.y1 - b.y0)) + m * 2;
+  const b = boxes.find(x => x.k === state.pick) || boxes[0];
+  const vb = [(b.x0 + b.x1) / 2 - w / 2, (b.y0 + b.y1) / 2 - h / 2, w, h]
+    .map(n => n.toFixed(1)).join(' ');
 
   $('#deckhost').innerHTML =
     `<button class="deck" type="button" ` +
       `aria-label="${esc(CONFIG.levels[state.pick].name)}, show where my car is">` +
       `<span class="deck-art">` +
         `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" ` +
-          `focusable="false">${deck()}</svg>` +
+          `focusable="false">${deck(state.pick)}</svg>` +
       `</span>` +
     `</button>`;
 
@@ -235,6 +295,7 @@ function renderStage(){
 function setPick(lv){
   if (state.busy || lv === state.pick) return;
   state.pick = lv;
+  renderStage();          // 两层内容不一样，必须重画
   paintPick();
   const host = $('#deckhost');
   host.classList.remove('swap');
