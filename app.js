@@ -14,7 +14,7 @@ const CONFIG = {
       /* 我们自己画的平面图。w/h 是图纸坐标空间，下面所有坐标都在这个空间里。
          mall / zones 是从商场官方图（reference/）里描出来的，不是手写的 */
       plan: {
-        w: 1750, h: 2650,
+        w: 1750, h: 2650, upm: 3.4,   // 1 米 ≈ 多少图纸单位，车位尺寸按它算
         /* 商场本体：静态，不可点 */
         /* 商场本体：一块干净的外轮廓，内部细节对「找车」没用，只会糊 */
         mall: [
@@ -65,7 +65,7 @@ const CONFIG = {
       name: 'Level 2',
       /* 我们自己画的平面图，几何来自 reference/ 里矫正后的官方图 */
       plan: {
-        w: 1150, h: 1728,
+        w: 1150, h: 1728, upm: 2.25,
         mall: [
           '517 367,553 462,762 463,781 483,779 559,618 577,615 606,618 668,722 671,722 954,750 956,734 958,742 1111,735 1034,713 1033,712 1011,674 1017,690 1096,679 1142,694 1143,696 1157,683 1160,683 1177,682 1159,630 1154,632 1126,606 1126,605 1152,584 1164,574 1133,531 1133,538 1075,442 1074,445 1129,475 1129,476 1109,494 1106,500 1179,545 1174,547 1191,579 1181,594 1200,668 1200,674 1214,693 1214,693 1247,672 1256,666 1288,631 1283,624 1298,621 1267,574 1284,575 1314,617 1315,600 1319,600 1345,619 1351,619 1375,653 1377,619 1376,618 1402,579 1401,579 1429,543 1429,461 1481,456 1456,433 1453,535 1427,550 1400,573 1394,568 1351,492 1326,473 1277,452 1271,425 1229,334 1229,334 1085,337 1067,494 1067,496 1052,514 1051,526 999,548 998,549 933,498 933,497 958,489 941,457 933,517 915,531 929,558 928,558 865,531 864,560 860,567 841,548 759,528 758,550 754,550 661,536 647,498 647,483 665,429 659,439 626,489 642,536 631,537 591,501 570,475 570,473 588,472 575,433 571,432 547,367 538,375 519,428 520,432 547,461 547,520 520,517 368',
           '518 115,648 131,681 189,700 193,701 207,671 208,671 249,719 259,728 240,726 261,678 288,658 331,541 325,534 287,503 287,498 314,499 264,472 261,497 261,502 241,505 274,536 275,547 237,514 227,513 205,478 205,463 250,444 214,416 215,415 301,457 302,461 283,461 338,447 340,447 358,457 302,416 302,408 336,267 333,269 122,517 116',
@@ -482,6 +482,74 @@ function centroid(pts){
   return [cx / (3 * a), cy / (3 * a)];
 }
 
+/* =========================================================
+   车位图：没有真实车位数据，按车场轮廓程序化生成。
+   商场导览屏上就是「通道两侧成排车位」的常规排布，这里照着做，
+   不求和现场一一对应，只要认得出是停车场、找得到自己那格
+   ========================================================= */
+
+/* 最小面积外接矩形 —— 车位该朝哪个方向排，由车场自己的形状决定，
+   不能写死角度，否则斜着的 Green 那种就排歪了 */
+function minAreaRect(pts){
+  const H = hull(pts);
+  if (H.length < 3) return null;
+  let best = null;
+  for (let i = 0; i < H.length; i++){
+    const a = H[i], b = H[(i + 1) % H.length];
+    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    const c = Math.cos(-ang), s = Math.sin(-ang);
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const p of H){
+      const x = p[0] * c - p[1] * s, y = p[0] * s + p[1] * c;
+      if (x < x0) x0 = x;  if (x > x1) x1 = x;
+      if (y < y0) y0 = y;  if (y > y1) y1 = y;
+    }
+    const area = (x1 - x0) * (y1 - y0);
+    if (!best || area < best.area) best = { area, ang, x0, x1, y0, y1 };
+  }
+  return best;
+}
+
+/* 射线法判断点在不在多边形里，用来把排到界外的车位丢掉 */
+function inPoly(p, poly){
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > p[1]) !== (yj > p[1]) &&
+        p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/* 标准车位 2.5m × 5m，通道 6m。换算成图纸单位 */
+const baySpec = upm => ({ bayW: 2.5 * upm, bayD: 5 * upm, aisle: 6 * upm });
+
+/* 在轮廓里铺车位：一条通道两侧各一排，整组重复。
+   只保留四角都在轮廓内的整格 —— 半格探到界外看着就是坏的 */
+function layoutBays(poly, o){
+  const r = minAreaRect(poly);
+  if (!r) return [];
+  const bayW = o.bayW, bayD = o.bayD, aisle = o.aisle;
+  const band = bayD * 2 + aisle;
+  const c = Math.cos(r.ang), s = Math.sin(r.ang);
+  const world = (x, y) => [x * c - y * s, x * s + y * c];
+
+  const out = [];
+  for (let by = r.y0; by < r.y1; by += band){
+    for (const dy of [0, bayD + aisle]){
+      const y = by + dy;
+      if (y + bayD > r.y1) continue;
+      for (let x = r.x0; x + bayW <= r.x1; x += bayW){
+        const quad = [[x, y], [x + bayW, y], [x + bayW, y + bayD], [x, y + bayD]].map(q => world(q[0], q[1]));
+        if (quad.every(q => inPoly(q, poly))){
+          out.push({ quad, row: Math.round((by - r.y0) / band), face: dy ? 1 : 0 });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 /* 屏 2：我们自己画的楼层平面图。商场本体是静态的，只有停车区能点 */
 function renderLevel(lv, drop){
   state.level = lv;
@@ -604,29 +672,73 @@ function renderLevel(lv, drop){
     : 'Tap a car park to see it.';
 }
 
+/* 屏 3：这一个停车场的车位图。车位是按轮廓生成的，不是真实数据 */
 function renderDetail(){
   const L = CONFIG.levels[state.level];
   const id = state.detail || L.car.carpark;
   const mine = id === L.car.carpark;
-  const info = CONFIG.carparks[id] || { detail: { image: '', aspect: '4 / 3', car: { x: 50, y: 50 } }, tips: [] };
+  const info = CONFIG.carparks[id] || { detail: {}, tips: [] };
+  const zone = (L.zones || []).find(z => z.park === id);
 
   $('#detail-swatch').style.background = parkFill(id);
   $('#detail-title').textContent = parkName(id);
-  $('#detail-sub').textContent = mine
-    ? `${L.name} · your car is here`
-    : `${L.name}, car park map`;
 
-  const box = $('#detail-plan');
-  box.style.aspectRatio = info.detail.aspect;
-  setPlan(box, info.detail.image, `${parkName(id)} car park map`);
-
-  const layer = $('#detail-overlay');
+  const box = $('#detail-plan'), layer = $('#detail-overlay');
   layer.innerHTML = '';
-  if (mine) layer.appendChild(pin(info.detail.car.x, info.detail.car.y, { title: 'Your car', drop: true }));
 
-  $('#detail-tips').innerHTML = info.tips.map(t =>
-    `<li>${thumb(t.image, t.alt)}<div><b>${esc(t.title)}</b><small>${esc(t.note)}</small></div></li>`
-  ).join('');
+  if (!zone || !L.plan.upm){                       // 没轮廓就退回占位
+    box.classList.remove('is-plan');
+    box.style.aspectRatio = '4 / 3';
+    $('#detail-sub').textContent = `${L.name}, car park map`;
+    setPlan(box, '', `${parkName(id)} map`);
+    $('#detail-tips').innerHTML = (info.tips || []).map(t =>
+      `<li>${thumb(t.image, t.alt)}<div><b>${esc(t.title)}</b><small>${esc(t.note)}</small></div></li>`).join('');
+    return;
+  }
+
+  const poly = parseZone(zone.pts);
+  const spots = layoutBays(poly, baySpec(L.plan.upm));
+  const myBay = mine ? (L.car.bay != null ? L.car.bay : Math.floor(spots.length * 0.42)) : -1;
+
+  $('#detail-sub').textContent = mine
+    ? `${L.name} · your car is here · about ${spots.length} bays`
+    : `${L.name} · about ${spots.length} bays`;
+
+  /* 取景到这个车场，留一点边 */
+  const xs = poly.map(p => p[0]), ys = poly.map(p => p[1]);
+  const pad = 6 * L.plan.upm;
+  const x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad;
+  const y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad;
+  const u = (x1 - x0) / 1000;                      // 尺寸随车场大小缩放
+
+  box.classList.add('is-plan');
+  box.style.aspectRatio = `${(x1 - x0).toFixed(0)} / ${(y1 - y0).toFixed(0)}`;
+  setPlan(box, '', '');
+
+  const quad = q => q.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const cells = spots.map((b, i) =>
+    `<polygon class="bay${i === myBay ? ' is-car' : ''}" points="${quad(b.quad)}"/>`).join('');
+
+  let mark = '';
+  if (myBay >= 0 && spots[myBay]){
+    const c = centroid(spots[myBay].quad);
+    mark = `<g transform="translate(${c[0].toFixed(1)},${c[1].toFixed(1)})"><g class="carmark drop">` +
+      `<circle class="carmark-halo" r="${(70 * u).toFixed(1)}"/>` +
+      `<circle class="carmark-dot" r="${(22 * u).toFixed(1)}" stroke-width="${(7 * u).toFixed(1)}"/>` +
+      `<circle class="carmark-eye" r="${(7 * u).toFixed(1)}"/>` +
+    `</g></g>`;
+  }
+
+  layer.innerHTML =
+    `<svg viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${(x1-x0).toFixed(0)} ${(y1-y0).toFixed(0)}" ` +
+      `xmlns="http://www.w3.org/2000/svg" class="baymap" role="img" ` +
+      `aria-label="${esc(parkName(id))}, ${spots.length} bays${mine ? ', your car marked' : ''}">` +
+      `<polygon class="bay-ground" points="${quad(poly)}" style="--pc:${parkFill(id)}"/>` +
+      `<g class="bays">${cells}</g>${mark}` +
+    `</svg>`;
+
+  $('#detail-tips').innerHTML = (info.tips || []).map(t =>
+    `<li>${thumb(t.image, t.alt)}<div><b>${esc(t.title)}</b><small>${esc(t.note)}</small></div></li>`).join('');
 }
 
 /* ---------- 换屏 ---------- */

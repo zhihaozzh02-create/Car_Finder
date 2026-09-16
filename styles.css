@@ -195,6 +195,14 @@ img{display:block;max-width:100%}
 .pz.is-mine .pz-fill{stroke:var(--red);stroke-opacity:1;fill-opacity:.62}
 .pz.is-mine .pz-tag{stroke:rgba(0,0,0,.72)}
 
+/* ---------- 屏 3：单个停车场的车位图 ---------- */
+.baymap{display:block;width:100%;height:100%}
+.bay-ground{fill:var(--pc);fill-opacity:.16;stroke:var(--pc);stroke-opacity:.8;
+  stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.bay{fill:var(--card);fill-opacity:.55;stroke:var(--ink-3);stroke-opacity:.5;
+  stroke-width:.7;vector-effect:non-scaling-stroke}
+.bay.is-car{fill:var(--red);fill-opacity:.9;stroke:var(--red);stroke-opacity:1}
+
 /* 「你在这」：蓝色，和代表「你的车」的红色分开 */
 .hereme{pointer-events:none}
 .here-acc{fill:#2E5BD9;fill-opacity:.12;stroke:#2E5BD9;stroke-opacity:.35;
