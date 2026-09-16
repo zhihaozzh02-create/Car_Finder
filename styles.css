@@ -182,14 +182,23 @@ img{display:block;max-width:100%}
   pointer-events:none}
 
 /* 停车区：底图是静态的，只有这些多边形能点 */
-.pz{cursor:pointer}
+.pz{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pz-fill{fill:var(--pc);fill-opacity:.55;stroke:var(--pc);stroke-opacity:.95;
   stroke-linejoin:round;transition:fill-opacity .18s}
 .pz-tag{fill:#fff;stroke:rgba(0,0,0,.6);paint-order:stroke fill;
   font-weight:700;letter-spacing:.01em;pointer-events:none}
-.pz:hover .pz-fill,.pz:focus-visible .pz-fill{fill-opacity:.68}
+.pz:hover .pz-fill{fill-opacity:.68}
+/* 不要方框：焦点和点击反馈都做在区域本身的形状上 */
+.pz:focus{outline:none}
 .pz:focus-visible{outline:none}
-.pz:focus-visible .pz-fill{stroke:var(--ink);stroke-opacity:1}
+.pz:focus-visible .pz-fill{stroke:var(--ink);stroke-opacity:1;fill-opacity:.72}
+
+/* 点下去的时候整块轻轻涨一下再落回来 */
+@keyframes zone-pop{0%{transform:scale(1)}36%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes zone-flash{0%{fill-opacity:.55}32%{fill-opacity:.96}100%{fill-opacity:.62}}
+.pz.is-tapped{animation:zone-pop .34s cubic-bezier(.3,.85,.3,1) both;
+  transform-box:fill-box;transform-origin:50% 50%}
+.pz.is-tapped .pz-fill{animation:zone-flash .34s ease both}
 
 /* 自己的车所在那块：红色只用在这里 */
 .pz.is-mine .pz-fill{stroke:var(--red);stroke-opacity:1;fill-opacity:.62}
@@ -206,9 +215,12 @@ img{display:block;max-width:100%}
 /* 可缩放的地图：单指拖、双指捏、滚轮、双击 */
 .baymap,.planmap{touch-action:none;cursor:grab}
 .baymap.is-zoomed,.planmap.is-zoomed{cursor:move}
-.bay{cursor:pointer}
+.bay{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .bay:hover{fill:var(--ink-3);fill-opacity:.35}
-.bay:focus-visible{outline:none;fill:var(--ink);fill-opacity:.35}
+.bay:focus,.bay:focus-visible{outline:none}
+.bay:focus-visible{fill:var(--ink);fill-opacity:.4}
+@keyframes bay-flash{0%{fill-opacity:.55}30%{fill-opacity:1;fill:var(--ink)}100%{fill-opacity:.55}}
+.bay.is-tapped{animation:bay-flash .3s ease both}
 
 /* ---------- 「是不是停在这」 ---------- */
 .ask{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;

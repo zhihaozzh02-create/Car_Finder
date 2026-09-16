@@ -197,6 +197,14 @@ const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 /* 元素找不到就跳过，别让一处缺失把后面的接线全带崩 */
 const on = (sel, ev, fn) => { const el = $(sel); if (el) el.addEventListener(ev, fn); };
+const noMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* 点下去先让元素自己动一下，再执行动作 —— 比一个蓝框清楚 */
+function tapThen(el, fn){
+  if (noMotion()) return fn();
+  el.classList.add('is-tapped');
+  setTimeout(() => { el.classList.remove('is-tapped'); fn(); }, 210);
+}
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const parkName = id => (CARPARKS[id] || ['?', '#888'])[0];
@@ -705,9 +713,9 @@ function renderLevel(lv, drop){
 
   $$('#level-overlay .pz').forEach(g => {
     const open = () => openDetail(g.dataset.park);
-    g.addEventListener('click', () => { if (!zoomMoved($('#level-overlay'))) open(); });
+    g.addEventListener('click', () => { if (!zoomMoved($('#level-overlay'))) tapThen(g, open); });
     g.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); }
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); tapThen(g, open); }
     });
   });
 
@@ -792,9 +800,9 @@ function renderDetail(){
   /* 每一格都能点：问一句「是不是停在这」，确认了就记下来 */
   layer.querySelectorAll('.bay').forEach(el => {
     const pick = () => askPark(id, +el.dataset.bay);
-    el.addEventListener('click', e => { if (!zoomMoved(layer)) pick(); });
+    el.addEventListener('click', () => { if (!zoomMoved(layer)) tapThen(el, pick); });
     el.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(); }
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); tapThen(el, pick); }
     });
   });
   makeZoomable(layer.querySelector('svg'));
@@ -847,10 +855,12 @@ function makeZoomable(svg){
     apply();
   };
 
+  let downAt = null;
   svg.addEventListener('pointerdown', e => {
     svg.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, toUser(e));
     svg.dataset.moved = '0';
+    downAt = [e.clientX, e.clientY];
     if (pts.size === 2){
       const [a, b] = [...pts.values()];
       pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), k: view.k };
@@ -868,9 +878,10 @@ function makeZoomable(svg){
       if (pinch.d > 0) zoomAt([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], pinch.k * (d / pinch.d));
       svg.dataset.moved = '1';
     } else if (pts.size === 1){
-      const dx = now[0] - prev[0], dy = now[1] - prev[1];
-      if (Math.abs(dx) + Math.abs(dy) > vb.width * 0.004) svg.dataset.moved = '1';
-      view.x += dx; view.y += dy;
+      /* 「算不算拖动」按屏幕像素判断 —— 用 viewBox 单位会小到一点就误判 */
+      if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 9) svg.dataset.moved = '1';
+      view.x += now[0] - prev[0];
+      view.y += now[1] - prev[1];
       apply();
     }
   });
