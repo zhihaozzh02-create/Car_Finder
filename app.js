@@ -11,16 +11,16 @@ const CONFIG = {
   levels: {
     L1: {
       name: 'Level 1',
-      /* 静态底图：商场官方楼层图，透视矫正 + 去色偏后的版本。w/h 是图片像素尺寸，
-         zones 的坐标就在这个像素空间里 */
-      plan: { image: 'images/L1-plan.jpg', w: 1750, h: 2650 },
+      /* 我们自己画的平面图。w/h 是图纸坐标空间，下面所有坐标都在这个空间里。
+         grid = 参考网格，mall = 商场本体轮廓（静态），anchors = 主力店，streets = 路名 */
+      plan: { w: 1750, h: 2650, grid: null, mall: [], anchors: [], streets: [] },
       /* 可点击的停车区。park 指向 CARPARKS 里的编号，pts 是 "x y,x y,..." */
       zones: [],
       car:  { carpark: 'P6' }   // 不填 x/y 就落在所属区域的中心；要微调就加 x / y（底图宽高的百分比）
     },
     L2: {
       name: 'Level 2',
-      plan: { image: 'images/L2-plan.jpg', w: 1100, h: 1676 },
+      plan: { w: 1100, h: 1676, grid: null, mall: [], anchors: [], streets: [] },
       zones: [],
       car:  { carpark: 'P10' }
     }
@@ -360,7 +360,7 @@ function pin(x, y, o){
   return wrap;
 }
 
-/* 多边形的重心，用来放标签和默认的 pin 位置 */
+/* 多边形的重心，用来放标签和默认的车标位置 */
 function centroid(pts){
   let a = 0, cx = 0, cy = 0;
   for (let i = 0; i < pts.length; i++){
@@ -372,10 +372,40 @@ function centroid(pts){
   return [cx / (3 * a), cy / (3 * a)];
 }
 
-/* 屏 2：商场楼层图当静态底图，停车区是画在上面的可点多边形 */
+const COLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/* 参考网格。商场自己的图上就有 A–P × 1–25，找车位时报「D14」很好用 */
+function gridSVG(g, u){
+  if (!g) return '';
+  const { x0, y0, cell, cols, rows } = g;
+  const x1 = x0 + cols * cell, y1 = y0 + rows * cell;
+  let out = '<g class="pg">';
+  for (let c = 0; c <= cols; c++){
+    const x = (x0 + c * cell).toFixed(1);
+    out += `<line x1="${x}" y1="${y0.toFixed(1)}" x2="${x}" y2="${y1.toFixed(1)}"/>`;
+  }
+  for (let r = 0; r <= rows; r++){
+    const y = (y0 + r * cell).toFixed(1);
+    out += `<line x1="${x0.toFixed(1)}" y1="${y}" x2="${x1.toFixed(1)}" y2="${y}"/>`;
+  }
+  out += '</g><g class="pg-key" font-size="' + (17 * u).toFixed(1) + '">';
+  for (let c = 0; c < cols; c++){
+    const x = (x0 + (c + .5) * cell).toFixed(1), L = COLS[c] || '';
+    out += `<text x="${x}" y="${(y0 - 12 * u).toFixed(1)}" text-anchor="middle">${L}</text>`;
+    out += `<text x="${x}" y="${(y1 + 24 * u).toFixed(1)}" text-anchor="middle">${L}</text>`;
+  }
+  for (let r = 0; r < rows; r++){
+    const y = (y0 + (r + .5) * cell).toFixed(1);
+    out += `<text x="${(x0 - 12 * u).toFixed(1)}" y="${y}" text-anchor="end" dominant-baseline="central">${r + 1}</text>`;
+    out += `<text x="${(x1 + 12 * u).toFixed(1)}" y="${y}" dominant-baseline="central">${r + 1}</text>`;
+  }
+  return out + '</g>';
+}
+
+/* 屏 2：我们自己画的楼层平面图。商场本体是静态的，只有停车区能点 */
 function renderLevel(lv, drop){
   state.level = lv;
-  const L = CONFIG.levels[lv], mine = L.car.carpark, info = CONFIG.carparks[mine];
+  const L = CONFIG.levels[lv], mine = L.car.carpark;
 
   $('#level-swatch').style.background = parkFill(mine);
   $('#level-title').textContent = parkName(mine);
@@ -383,11 +413,9 @@ function renderLevel(lv, drop){
     (state.gps ? ` · GPS accuracy ±${Math.round(state.gps.coords.accuracy)} m` : '');
   $$('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.level === lv)));
 
-  const box = $('#level-plan');
-  const zones = L.zones || [];
+  const box = $('#level-plan'), P = L.plan || {}, zones = L.zones || [];
 
-  /* 还没放楼层图时，退回原来的占位格子 */
-  if (!L.plan.image){
+  if (!P.w || !zones.length){          // 数据还没齐，退回占位格子
     box.classList.remove('is-plan');
     box.style.aspectRatio = '4 / 3';
     setPlan(box, '', `${L.name} map`);
@@ -397,28 +425,44 @@ function renderLevel(lv, drop){
   }
 
   box.classList.add('is-plan');
-  box.style.aspectRatio = `${L.plan.w} / ${L.plan.h}`;
+  box.style.aspectRatio = `${P.w} / ${P.h}`;
   setPlan(box, '', '');
 
-  const u = L.plan.w / 1000;        // 底图分辨率不同，尺寸都按这个单位缩放
+  const u = P.w / 1000;                // 尺寸跟着图纸坐标空间缩放
   const parsed = zones.map(z => ({ ...z, poly: parseZone(z.pts) }));
   const my = parsed.find(z => z.park === mine);
   const car = (L.car.x != null && L.car.y != null)
-    ? [L.car.x / 100 * L.plan.w, L.car.y / 100 * L.plan.h]
+    ? [L.car.x / 100 * P.w, L.car.y / 100 * P.h]
     : (my ? centroid(my.poly) : null);
 
-  const body = parsed.map(z => {
+  /* 商场本体：静态，不可点 */
+  const mall = (P.mall || []).map(d =>
+    `<polygon class="pm" points="${esc(d)}"/>`).join('');
+
+  const anchors = (P.anchors || []).map(a =>
+    `<text class="pa" x="${a.x}" y="${a.y}" text-anchor="middle" dominant-baseline="central" ` +
+      `font-size="${(a.size || 19) * u}">${esc(a.name)}</text>`).join('');
+
+  const streets = (P.streets || []).map(st => {
+    const t = st.rotate ? ` transform="rotate(${st.rotate} ${st.x} ${st.y})"` : '';
+    return `<text class="ps" x="${st.x}" y="${st.y}" text-anchor="middle" ` +
+      `dominant-baseline="central" font-size="${16 * u}"${t}>${esc(st.name)}</text>`;
+  }).join('');
+
+  /* 停车区：唯一可点的东西 */
+  const pz = parsed.map(z => {
     const d = z.poly.map(p => p.join(',')).join(' ');
     const isMine = z.park === mine;
     const [lx, ly] = centroid(z.poly);
+    const label = (z.name || parkName(z.park)).replace(/\s*Carpark$/i, '');
     return `<g class="pz${isMine ? ' is-mine' : ''}" role="button" tabindex="0" ` +
       `data-park="${esc(z.park)}" aria-label="${esc(parkName(z.park))}` +
       `${isMine ? ', where your car is' : ''}. Open this car park">` +
       `<polygon class="pz-fill" points="${d}" style="--pc:${parkFill(z.park)}" ` +
         `stroke-width="${(3 * u).toFixed(1)}"/>` +
       `<text class="pz-tag" x="${lx.toFixed(0)}" y="${ly.toFixed(0)}" text-anchor="middle" ` +
-        `dominant-baseline="central" font-size="${(26 * u).toFixed(1)}" ` +
-        `stroke-width="${(4.5 * u).toFixed(1)}">${esc(z.name || parkName(z.park))}</text>` +
+        `dominant-baseline="central" font-size="${(24 * u).toFixed(1)}" ` +
+        `stroke-width="${(4 * u).toFixed(1)}">${esc(label)}</text>` +
     `</g>`;
   }).join('');
 
@@ -426,17 +470,17 @@ function renderLevel(lv, drop){
     `<g class="carmark${drop ? ' drop' : ''}" ` +
       `transform="translate(${car[0].toFixed(0)},${car[1].toFixed(0)})">` +
       `<circle class="carmark-halo" r="${(46 * u).toFixed(1)}"/>` +
-      `<circle class="carmark-dot" r="${(15 * u).toFixed(1)}" ` +
-        `stroke-width="${(5 * u).toFixed(1)}"/>` +
+      `<circle class="carmark-dot" r="${(15 * u).toFixed(1)}" stroke-width="${(5 * u).toFixed(1)}"/>` +
       `<circle class="carmark-eye" r="${(4.5 * u).toFixed(1)}"/>` +
     `</g>`;
 
+  const pad = 34 * u;
   $('#level-overlay').innerHTML =
-    `<svg viewBox="0 0 ${L.plan.w} ${L.plan.h}" xmlns="http://www.w3.org/2000/svg" ` +
-      `class="planmap" role="group" aria-label="${esc(L.name)} plan, tap a car park">` +
-      `<image href="${esc(L.plan.image)}" x="0" y="0" width="${L.plan.w}" height="${L.plan.h}" ` +
-        `preserveAspectRatio="none"/>` +
-      `<g class="pzs">${body}</g>${marker}` +
+    `<svg viewBox="${-pad} ${-pad} ${P.w + pad * 2} ${P.h + pad * 2}" ` +
+      `xmlns="http://www.w3.org/2000/svg" class="planmap" role="group" ` +
+      `aria-label="${esc(L.name)} plan, tap a car park">` +
+      gridSVG(P.grid, u) + streets + `<g class="pmall">${mall}</g>` + anchors +
+      `<g class="pzs">${pz}</g>` + marker +
     `</svg>`;
 
   $$('#level-overlay .pz').forEach(g => {
@@ -447,10 +491,9 @@ function renderLevel(lv, drop){
     });
   });
 
-  $('#level-note').textContent = !zones.length
-    ? `${L.name} plan. Car park zones coming.`
-    : (my ? `Your car is in the ${parkName(mine)}. Tap any car park to see it.`
-          : 'Tap a car park to see it.');
+  $('#level-note').textContent = my
+    ? `Your car is in the ${parkName(mine)}. Tap any car park to see it.`
+    : 'Tap a car park to see it.';
 }
 
 function renderDetail(){
