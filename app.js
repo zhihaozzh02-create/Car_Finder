@@ -12,15 +12,15 @@ const CONFIG = {
     L1: {
       name: 'Level 1',
       /* 我们自己画的平面图。w/h 是图纸坐标空间，下面所有坐标都在这个空间里。
-         grid = 参考网格，mall = 商场本体轮廓（静态），anchors = 主力店，streets = 路名 */
-      plan: { w: 1750, h: 2650, grid: null, mall: [], anchors: [], streets: [] },
+         mall = 商场本体轮廓（静态），anchors = 主力店，streets = 路名 */
+      plan: { w: 1750, h: 2650, mall: [], anchors: [], streets: [] },
       /* 可点击的停车区。park 指向 CARPARKS 里的编号，pts 是 "x y,x y,..." */
       zones: [],
       car:  { carpark: 'P6' }   // 不填 x/y 就落在所属区域的中心；要微调就加 x / y（底图宽高的百分比）
     },
     L2: {
       name: 'Level 2',
-      plan: { w: 1100, h: 1676, grid: null, mall: [], anchors: [], streets: [] },
+      plan: { w: 1100, h: 1676, mall: [], anchors: [], streets: [] },
       zones: [],
       car:  { carpark: 'P10' }
     }
@@ -372,36 +372,6 @@ function centroid(pts){
   return [cx / (3 * a), cy / (3 * a)];
 }
 
-const COLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-/* 参考网格。商场自己的图上就有 A–P × 1–25，找车位时报「D14」很好用 */
-function gridSVG(g, u){
-  if (!g) return '';
-  const { x0, y0, cell, cols, rows } = g;
-  const x1 = x0 + cols * cell, y1 = y0 + rows * cell;
-  let out = '<g class="pg">';
-  for (let c = 0; c <= cols; c++){
-    const x = (x0 + c * cell).toFixed(1);
-    out += `<line x1="${x}" y1="${y0.toFixed(1)}" x2="${x}" y2="${y1.toFixed(1)}"/>`;
-  }
-  for (let r = 0; r <= rows; r++){
-    const y = (y0 + r * cell).toFixed(1);
-    out += `<line x1="${x0.toFixed(1)}" y1="${y}" x2="${x1.toFixed(1)}" y2="${y}"/>`;
-  }
-  out += '</g><g class="pg-key" font-size="' + (17 * u).toFixed(1) + '">';
-  for (let c = 0; c < cols; c++){
-    const x = (x0 + (c + .5) * cell).toFixed(1), L = COLS[c] || '';
-    out += `<text x="${x}" y="${(y0 - 12 * u).toFixed(1)}" text-anchor="middle">${L}</text>`;
-    out += `<text x="${x}" y="${(y1 + 24 * u).toFixed(1)}" text-anchor="middle">${L}</text>`;
-  }
-  for (let r = 0; r < rows; r++){
-    const y = (y0 + (r + .5) * cell).toFixed(1);
-    out += `<text x="${(x0 - 12 * u).toFixed(1)}" y="${y}" text-anchor="end" dominant-baseline="central">${r + 1}</text>`;
-    out += `<text x="${(x1 + 12 * u).toFixed(1)}" y="${y}" dominant-baseline="central">${r + 1}</text>`;
-  }
-  return out + '</g>';
-}
-
 /* 屏 2：我们自己画的楼层平面图。商场本体是静态的，只有停车区能点 */
 function renderLevel(lv, drop){
   state.level = lv;
@@ -479,7 +449,7 @@ function renderLevel(lv, drop){
     `<svg viewBox="${-pad} ${-pad} ${P.w + pad * 2} ${P.h + pad * 2}" ` +
       `xmlns="http://www.w3.org/2000/svg" class="planmap" role="group" ` +
       `aria-label="${esc(L.name)} plan, tap a car park">` +
-      gridSVG(P.grid, u) + streets + `<g class="pmall">${mall}</g>` + anchors +
+      streets + `<g class="pmall">${mall}</g>` + anchors +
       `<g class="pzs">${pz}</g>` + marker +
     `</svg>`;
 
