@@ -194,6 +194,12 @@ img{display:block;max-width:100%}
 .pz.is-mine .pz-fill{stroke:var(--red);stroke-opacity:1;fill-opacity:.55}
 .pz.is-mine .pz-tag{stroke:rgba(0,0,0,.72)}
 
+/* 「你在这」：蓝色，和代表「你的车」的红色分开 */
+.hereme{pointer-events:none}
+.here-acc{fill:#2E5BD9;fill-opacity:.12;stroke:#2E5BD9;stroke-opacity:.35;
+  stroke-width:1.5;vector-effect:non-scaling-stroke}
+.here-dot{fill:#2E5BD9;stroke:#fff}
+
 /* 车的位置 */
 .carmark{pointer-events:none}
 .carmark-halo{fill:var(--red);opacity:.16}

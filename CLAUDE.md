@@ -50,6 +50,20 @@ No build step, no dependencies - open `index.html` in a browser.
 Keep `CONFIG.levels[*].car.carpark` pointing at a car park that is actually on that level, or the
 level screen will name a car park the model does not show.
 
+## "You are here"
+`CONFIG.levels[*].geo` holds two calibration points - for each, the plan coordinate and the real
+lat/lon of the same spot. `geoToPlan()` solves the similarity transform (rotation, scale,
+translation) from that pair and projects a GPS fix onto the plan, and returns `perMetre` so the
+accuracy circle is drawn to scale. **Someone has to stand at two recognisable spots on each level
+and record the coordinates** - pick them far apart. Until that is done the fields are `null` and no
+"you are here" dot is drawn.
+
+GPS does not have to work out which level you are on - the user already answered that on the home
+screen - so its poor vertical accuracy is irrelevant here. What does bite is losing the fix
+entirely under a concrete deck, so `trackHere()` watches the position while the level screen is
+open and fails silently: no fix simply means no blue dot, and the red pin and the plan still do
+their job. Blue is "you", red is "your car" - do not merge them.
+
 To swap in a floor plan: drop the file in `images/`, set `image: 'images/L1.png'`, set `aspect` to
 the image's real width / height, then tune the pin and zone percentages against the image.
 

@@ -14,6 +14,11 @@ const CONFIG = {
       /* 我们自己画的平面图。w/h 是图纸坐标空间，下面所有坐标都在这个空间里。
          mall = 商场本体轮廓（静态），anchors = 主力店，streets = 路名 */
       plan: { w: 1750, h: 2650, mall: [], anchors: [], streets: [] },
+      /* GPS 标定：在场地里站两个认得出来的位置各记一次经纬度，
+         把那两点的图纸坐标和经纬度填进来，就能把实时定位画到图上。
+         两个点越远越准，别选在一条很短的线上。留 null = 不画「你在这」 */
+      geo: { a: { x: null, y: null, lat: null, lon: null },
+             b: { x: null, y: null, lat: null, lon: null } },
       /* 可点击的停车区。park 指向 CARPARKS 里的编号，pts 是 "x y,x y,..." */
       zones: [],
       car:  { carpark: 'P6' }   // 不填 x/y 就落在所属区域的中心；要微调就加 x / y（底图宽高的百分比）
@@ -21,6 +26,8 @@ const CONFIG = {
     L2: {
       name: 'Level 2',
       plan: { w: 1100, h: 1676, mall: [], anchors: [], streets: [] },
+      geo: { a: { x: null, y: null, lat: null, lon: null },
+             b: { x: null, y: null, lat: null, lon: null } },
       zones: [],
       car:  { carpark: 'P10' }
     }
@@ -115,7 +122,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const parkName = id => (CARPARKS[id] || ['?', '#888'])[0];
 const parkFill = id => (CARPARKS[id] || ['?', '#888'])[1];
 
-const state = { level: 'L1', pick: 'L1', detail: null, gps: null, busy: false };
+const state = { level: 'L1', pick: 'L1', detail: null, gps: null, watch: null, busy: false };
 
 /* 由本色算出侧面的深浅：太深的颜色改成往亮里混，免得糊成一片 */
 function sideColour(hex, amount){
@@ -360,6 +367,31 @@ function pin(x, y, o){
   return wrap;
 }
 
+/* 经纬度 -> 图纸坐标。两个标定点给出旋转 + 缩放 + 平移（相似变换），
+   这对一层停车场足够了，不需要完整的地理配准 */
+function geoToPlan(geo, lat, lon){
+  const a = geo && geo.a, b = geo && geo.b;
+  if (!a || a.lat == null || a.x == null || !b || b.lat == null || b.x == null) return null;
+
+  const R = 111320, k = Math.cos(a.lat * Math.PI / 180);
+  const local = (la, lo) => [(lo - a.lon) * R * k, -(la - a.lat) * R];  // 东 +x，北 -y
+
+  const [bx, by] = local(b.lat, b.lon);
+  const den = bx * bx + by * by;
+  if (!den) return null;                        // 两个标定点重合了
+
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const sc = (dx * bx + dy * by) / den;         // 相似变换 [sc, -rt; rt, sc]
+  const rt = (dy * bx - dx * by) / den;
+
+  const [px, py] = local(lat, lon);
+  return {
+    x: a.x + sc * px - rt * py,
+    y: a.y + rt * px + sc * py,
+    perMetre: Math.hypot(sc, rt)                // 1 米等于多少图纸单位，用来画精度圈
+  };
+}
+
 /* 多边形的重心，用来放标签和默认的车标位置 */
 function centroid(pts){
   let a = 0, cx = 0, cy = 0;
@@ -436,6 +468,21 @@ function renderLevel(lv, drop){
     `</g>`;
   }).join('');
 
+  /* 「你在这」：有定位、且这一层做过标定才画。拿不到就什么都不显示，
+     用户照着 pin 走一样能找到车 */
+  let here = '';
+  if (state.gps && L.geo){
+    const c = state.gps.coords, at = geoToPlan(L.geo, c.latitude, c.longitude);
+    if (at && at.x > -P.w && at.x < P.w * 2 && at.y > -P.h && at.y < P.h * 2){
+      const acc = Math.max(8 * u, (c.accuracy || 30) * at.perMetre);
+      here =
+        `<g class="hereme" transform="translate(${at.x.toFixed(0)},${at.y.toFixed(0)})">` +
+          `<circle class="here-acc" r="${acc.toFixed(0)}"/>` +
+          `<circle class="here-dot" r="${(11 * u).toFixed(1)}" stroke-width="${(4 * u).toFixed(1)}"/>` +
+        `</g>`;
+    }
+  }
+
   const marker = !car ? '' :
     `<g class="carmark${drop ? ' drop' : ''}" ` +
       `transform="translate(${car[0].toFixed(0)},${car[1].toFixed(0)})">` +
@@ -450,7 +497,7 @@ function renderLevel(lv, drop){
       `xmlns="http://www.w3.org/2000/svg" class="planmap" role="group" ` +
       `aria-label="${esc(L.name)} plan, tap a car park">` +
       streets + `<g class="pmall">${mall}</g>` + anchors +
-      `<g class="pzs">${pz}</g>` + marker +
+      `<g class="pzs">${pz}</g>` + here + marker +
     `</svg>`;
 
   $$('#level-overlay .pz').forEach(g => {
@@ -518,6 +565,23 @@ function locate(){
   });
 }
 
+/* 停车场在楼板下面时定位会飘甚至断掉，所以是持续跟踪 + 安静降级：
+   拿不到就不画「你在这」，图和 pin 照常 */
+function trackHere(on){
+  if (!CONFIG.useRealGPS || !navigator.geolocation) return;
+  if (!on){
+    if (state.watch != null) navigator.geolocation.clearWatch(state.watch);
+    state.watch = null;
+    return;
+  }
+  if (state.watch != null) return;
+  state.watch = navigator.geolocation.watchPosition(
+    pos => { state.gps = pos; if ($('#level').classList.contains('is-on')) renderLevel(state.level, false); },
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+  );
+}
+
 /* 点楼板 → 该层抬起、另一层淡出 → 定位 → 平面图立起来 */
 async function pickLevel(lv, node){
   if (state.busy) return;
@@ -534,6 +598,7 @@ async function pickLevel(lv, node){
   state.gps = pos;
   renderLevel(lv, true);
   show('level', 'fwd');
+  trackHere(true);
   showFinding(false);
 
   $('#home').classList.remove('is-leaving');
@@ -553,6 +618,6 @@ paintPick();
 $$('[data-pick]').forEach(b => b.addEventListener('click', () => setPick(b.dataset.pick)));
 $$('.seg button').forEach(b => b.addEventListener('click', () => renderLevel(b.dataset.level, true)));
 $$('[data-back]').forEach(b => b.addEventListener('click', () => {
-  if (b.dataset.reset) state.gps = null;
+  if (b.dataset.back === 'home'){ trackHere(false); state.gps = null; }
   show(b.dataset.back, 'back');
 }));
