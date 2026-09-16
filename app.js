@@ -59,7 +59,6 @@ const CONFIG = {
          两个点越远越准，别选在一条很短的线上。留 null = 不画「你在这」 */
       geo: { a: { x: null, y: null, lat: null, lon: null },
              b: { x: null, y: null, lat: null, lon: null } },
-      car:  { carpark: 'P6' }   // 不填 x/y 就落在所属区域的中心；要微调就加 x / y（底图宽高的百分比）
     },
     L2: {
       name: 'Level 2',
@@ -107,7 +106,6 @@ const CONFIG = {
       ],
       geo: { a: { x: null, y: null, lat: null, lon: null },
              b: { x: null, y: null, lat: null, lon: null } },
-      car:  { carpark: 'P10' }
     }
   },
 
@@ -215,9 +213,8 @@ const state = { level: 'L1', pick: 'L1', detail: null, gps: null, watch: null, b
 
 /* 这一层的车停在哪。用户自己在车位图上标过就以用户的为准，否则用 CONFIG 里的演示数据 */
 function carOf(lv){
-  if (state.parked) return state.parked.level === lv ? state.parked : null;   // 车只可能在一层
-  const c = CONFIG.levels[lv].car;
-  return { level: lv, park: c.carpark, bay: c.bay != null ? c.bay : null, ref: null };
+  if (!state.parked) return null;                           // 没标过就是没有车
+  return state.parked.level === lv ? state.parked : null;   // 车只可能在一层
 }
 
 /* 标过的车位记下来，刷新页面还在 —— 演示的时候不用每次重标 */
@@ -601,7 +598,7 @@ function renderLevel(lv, drop){
   sw.style.background = mine ? parkFill(mine) : 'transparent';
   sw.hidden = !mine;
   $('#level-title').textContent = mine ? parkName(mine) : L.name;
-  $('#level-sub').textContent = (mine ? `Your car is here, ${L.name}` : `Tap the bay you parked in`) +
+  $('#level-sub').textContent = (mine ? `Your car is here, ${L.name}` : `Tap the car park you parked in`) +
     (state.gps ? ` · GPS accuracy ±${Math.round(state.gps.coords.accuracy)} m` : '');
   $$('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.level === lv)));
 
@@ -724,8 +721,8 @@ function renderLevel(lv, drop){
   hitFallback(lvlSvg, '.pz', g => tapThen(g, () => openDetail(g.dataset.park)));
 
   $('#level-note').textContent = my
-    ? `Your car is in the ${parkName(mine)}${car.ref ? ', ' + car.ref : ''}. Tap a car park to see its bays.`
-    : 'Tap a car park to see its bays.';
+    ? `Your car is in the ${parkName(mine)}${car.ref ? ', ' + car.ref : ''}.`
+    : 'Open a car park and tap the bay you parked in.';
 }
 
 /* 屏 3：这一个停车场的车位图。车位是按轮廓生成的，不是真实数据 */
@@ -1023,12 +1020,12 @@ async function pickLevel(lv, node){
   if (state.busy) return;
   state.busy = true;
 
+  const hunting = !!carOf(lv);       // 标过车位才叫「找车」，否则是去标车位
   node.classList.add('is-picked');
   $('#home').classList.add('is-leaving');
 
-  const ready = Promise.all([locate(), wait(CONFIG.findingDelay)]);
-  await wait(230);
-  showFinding(true);
+  const ready = Promise.all([locate(), wait(hunting ? CONFIG.findingDelay : 420)]);
+  if (hunting){ await wait(230); showFinding(true); }
   const [pos] = await ready;
 
   state.gps = pos;
@@ -1043,7 +1040,8 @@ async function pickLevel(lv, node){
 }
 
 function openDetail(park){
-  state.detail = park || CONFIG.levels[state.level].car.carpark;
+  const car = carOf(state.level), zs = CONFIG.levels[state.level].zones || [];
+  state.detail = park || (car && car.park) || (zs[0] && zs[0].park);
   renderDetail();
   show('detail', 'fwd');
 }

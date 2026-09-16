@@ -47,8 +47,10 @@ No build step, no dependencies - open `index.html` in a browser.
    the car parks behind them - 15 is about the limit), `edge` (how far the plate reaches past the
    content), `margin`.
 
-Keep `CONFIG.levels[*].car.carpark` pointing at a car park that is actually on that level, or the
-level screen will name a car park the model does not show.
+There is no preset car. Until someone taps a bay, `carOf()` returns `null` and the level and car
+park screens simply show the map with nothing marked - that is the correct empty state, not a bug.
+Choosing a level in that state skips the "Finding your car…" step, because there is nothing to find
+yet; you are on your way to record where you parked.
 
 ## The level plans
 `CONFIG.levels[*].plan` holds the plan we draw ourselves - `mall` (the centre's outline, static),
