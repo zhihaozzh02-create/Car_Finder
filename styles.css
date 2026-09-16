@@ -183,7 +183,7 @@ img{display:block;max-width:100%}
 
 /* 停车区：底图是静态的，只有这些多边形能点 */
 .pz{cursor:pointer}
-.pz-fill{fill:var(--pc);fill-opacity:.42;stroke:var(--pc);stroke-opacity:.9;
+.pz-fill{fill:var(--pc);fill-opacity:.55;stroke:var(--pc);stroke-opacity:.95;
   stroke-linejoin:round;transition:fill-opacity .18s}
 .pz-tag{fill:#fff;stroke:rgba(0,0,0,.6);paint-order:stroke fill;
   font-weight:700;letter-spacing:.01em;pointer-events:none}
@@ -192,7 +192,7 @@ img{display:block;max-width:100%}
 .pz:focus-visible .pz-fill{stroke:var(--ink);stroke-opacity:1}
 
 /* 自己的车所在那块：红色只用在这里 */
-.pz.is-mine .pz-fill{stroke:var(--red);stroke-opacity:1;fill-opacity:.55}
+.pz.is-mine .pz-fill{stroke:var(--red);stroke-opacity:1;fill-opacity:.62}
 .pz.is-mine .pz-tag{stroke:rgba(0,0,0,.72)}
 
 /* 「你在这」：蓝色，和代表「你的车」的红色分开 */

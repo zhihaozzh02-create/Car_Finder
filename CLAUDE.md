@@ -50,6 +50,25 @@ No build step, no dependencies - open `index.html` in a browser.
 Keep `CONFIG.levels[*].car.carpark` pointing at a car park that is actually on that level, or the
 level screen will name a car park the model does not show.
 
+## The level plans
+`CONFIG.levels[*].plan` holds the plan we draw ourselves - `mall` (the centre's outline, static),
+`anchors` (store names), `streets` - and `zones` alongside it holds the car parks, which are the
+only thing that takes a tap. All of it is picture-space geometry traced out of the rectified
+directory maps in `reference/`, not hand-placed, and everything sizes off `plan.w` so a different
+scan needs no new numbers. The view fits the drawn content, not the source sheet.
+
+Tracing the individual tenancy blocks was tried and dropped: at phone size it came out as grey
+soup, and the interior of the centre is not what someone looking for their car needs. One clean
+silhouette plus anchor names reads far better.
+
+The discriminator that made the tracing work is **r - g**: on these scans the paper, the grid and
+the corridors all sit within ±8, while the tenancy fill is 18-37. Colour-distance thresholds
+against a seed do not separate them, because the two scans have different paper casts.
+
+`zones[*].park` points at a `CARPARKS` id for the colour and the tips; `zones[*].name` is what the
+directory prints ("Pink Carpark"). A colour can cover two separate areas - Aqua on L1, Yellow and
+Orange on L2 - and each area is its own polygon under the same name.
+
 ## "You are here"
 `CONFIG.levels[*].geo` holds two calibration points - for each, the plan coordinate and the real
 lat/lon of the same spot. `geoToPlan()` solves the similarity transform (rotation, scale,
