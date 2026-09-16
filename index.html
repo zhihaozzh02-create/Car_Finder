@@ -13,11 +13,16 @@
 <body>
 <div class="app">
 
-  <!-- ===== 屏 1：整屏只有两块楼板，点哪块选哪层 ===== -->
+  <!-- ===== 屏 1：一次只显示一层，切换 L1 / L2，点模型进入该层 ===== -->
   <!-- 标题只给读屏软件，视觉上不出现 -->
   <section class="screen is-on" id="home" aria-labelledby="home-title">
     <h1 class="sr-only" id="home-title" tabindex="-1">Which level did you park on?</h1>
-    <div class="decks" id="decks"></div>
+    <div class="pick" role="group" aria-label="Choose a level">
+      <button type="button" data-pick="L1">L1</button>
+      <button type="button" data-pick="L2">L2</button>
+    </div>
+    <div class="deckhost" id="deckhost"></div>
+    <p class="plate" id="deck-plate" aria-hidden="true"></p>
   </section>
 
   <!-- ===== 屏 2：该层平面图 + 车的位置 ===== -->

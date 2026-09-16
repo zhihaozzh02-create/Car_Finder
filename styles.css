@@ -93,40 +93,43 @@ img{display:block;max-width:100%}
 .note{margin:var(--s3) 0 0;font-size:14px;color:var(--ink-2)}
 
 /* ---------- 3D 楼层模型：首屏的全部内容 ---------- */
-/* 首屏没有顶栏 / 标题 / 说明，两块楼板在视口里居中 */
+/* 首屏没有顶栏 / 标题 / 说明：一个 L1 / L2 切换 + 一层模型 */
 #home.is-on{
   min-height:calc(100dvh - var(--s6));
   display:grid;
   align-content:center;
-  align-content:safe center;   /* 视口太矮时不要把楼板挤出屏幕顶上 */
+  align-content:safe center;   /* 视口太矮时不要把模型挤出屏幕顶上 */
+  justify-items:center;
+  gap:var(--s5);
 }
-.decks{display:grid;gap:var(--s5)}
 
-/* 一块楼板 = 一个按钮：左边 L1 / L2 标签，右边结构图 */
-.deck{
-  display:flex;align-items:center;gap:var(--s4);
-  width:100%;padding:var(--s2) 0;
-  border-radius:var(--r);
-  transition:transform .28s cubic-bezier(.2,.75,.25,1),opacity .3s;
+/* L1 / L2 切换 */
+.pick{display:inline-flex;padding:3px;gap:3px;border-radius:999px;background:var(--sunk)}
+.pick button{
+  min-width:62px;height:38px;padding:0 var(--s4);
+  border-radius:999px;font-size:15px;font-weight:600;color:var(--ink-2);
+  transition:background .18s,color .18s;
 }
-.deck-tag{flex:none;width:4.4rem;text-align:right}
-.deck-tag b{display:block;font-size:40px;font-weight:700;line-height:1;letter-spacing:-.045em}
-.deck-tag small{display:block;margin-top:var(--s1);font-size:13px;color:var(--ink-2)}
-.deck-tag::after{content:"";display:block;width:40px;height:3px;
-  margin:var(--s2) 0 0 auto;background:var(--ink);transition:background .2s}
+.pick button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px var(--lift)}
 
-.deck-art{flex:1;min-width:0}
+/* 模型本身就是按钮 */
+.deckhost{width:100%}
+.deck{display:block;width:100%;border-radius:var(--r);
+  transition:transform .28s cubic-bezier(.2,.75,.25,1),opacity .3s}
+.deck-art{display:block}
 .deck-art svg{display:block;width:100%;height:auto}
 .deck .top,.deck .wall{stroke:var(--model-line);stroke-width:.9;stroke-linejoin:round;
   vector-effect:non-scaling-stroke}
+.deck:hover,.deck:focus-visible{transform:translateY(-8px)}
+.deck.is-picked{transform:translateY(-14px)}
 
-.deck:hover,.deck:focus-visible{transform:translateY(-9px)}
-.deck:hover .deck-tag::after,.deck:focus-visible .deck-tag::after{background:var(--red)}
-.deck:focus-visible .deck-tag b{color:var(--red)}
-.deck.is-picked{transform:translateY(-16px)}
-.deck.is-picked .deck-tag b{color:var(--red)}
-.deck.is-picked .deck-tag::after{background:var(--red)}
-.deck.is-dimmed{opacity:.2}
+/* 换层时模型轻轻升一下 */
+@keyframes deck-swap{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.deckhost.swap .deck{animation:deck-swap .4s cubic-bezier(.2,.75,.25,1) both}
+
+/* 模型下面那行图纸式的层号 */
+.plate{margin:0;font-size:12px;font-weight:600;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--ink-3)}
 
 /* ---------- 平面图 ---------- */
 .planbox{
@@ -230,7 +233,8 @@ img{display:block;max-width:100%}
 .screen.anim-fwd .planbox{animation:plan-rise .48s cubic-bezier(.2,.75,.25,1) both;transform-origin:50% 100%}
 .pin-body.drop{animation:pin-drop .5s cubic-bezier(.2,.7,.3,1.15) both}
 
-#home.is-leaving .decks{animation:stage-dive .46s cubic-bezier(.45,0,.55,1) both;transform-origin:50% 50%}
+#home.is-leaving .deckhost{animation:stage-dive .46s cubic-bezier(.45,0,.55,1) both;transform-origin:50% 50%}
+#home.is-leaving .pick,#home.is-leaving .plate{animation:fade-out .26s ease both}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none !important;transition:none !important}

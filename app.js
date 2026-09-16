@@ -92,7 +92,7 @@ const CENTRE = {
 };
 
 /* ---------- 4. 楼层模型的摆放 ---------- */
-/*  两块楼板的间距、L1 / L2 标签的字号都在 styles.css 里（.decks / .deck-tag）  */
+/*  切换条、层号的排版都在 styles.css 里（.pick / .plate）  */
 const MODEL = {
   squash: 0.90,   // 楼板纵向压扁比例（1 = 和牌子完全同比例）
   depth:  13,     // 楼板厚度
@@ -109,7 +109,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const parkName = id => (CARPARKS[id] || ['?', '#888'])[0];
 const parkFill = id => (CARPARKS[id] || ['?', '#888'])[1];
 
-const state = { level: 'L1', gps: null, busy: false };
+const state = { level: 'L1', pick: 'L1', gps: null, busy: false };
 
 /* 由本色算出侧面的深浅：太深的颜色改成往亮里混，免得糊成一片 */
 function sideColour(hex, amount){
@@ -163,25 +163,39 @@ function deck(){
   ).join('');
 }
 
-/* 屏 1：两块可点的楼板。楼板本身就是按钮，没有别的控件 */
+/* 屏 1：一次只画一层。L1 / L2 只是换个名字——同一座停车楼，两层轮廓本来就一样 */
 function renderStage(){
   const plateH = CENTRE.h * MODEL.squash + MODEL.depth;
   const vb = [-MODEL.pad, -MODEL.pad, CENTRE.w + MODEL.pad * 2, plateH + MODEL.pad * 2].join(' ');
-  const art = deck();   // 两层的结构一样，画一次复用
 
-  $('#decks').innerHTML = ['L2', 'L1'].map(level =>
-    `<button class="deck" type="button" data-level="${level}" ` +
-      `aria-label="${esc(CONFIG.levels[level].name)}, choose this level">` +
-      `<span class="deck-tag" aria-hidden="true"><b>${level}</b>` +
-        `<small>${esc(CONFIG.levels[level].name)}</small></span>` +
+  $('#deckhost').innerHTML =
+    `<button class="deck" type="button" ` +
+      `aria-label="${esc(CONFIG.levels[state.pick].name)}, show where my car is">` +
       `<span class="deck-art">` +
         `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" ` +
-          `focusable="false">${art}</svg>` +
+          `focusable="false">${deck()}</svg>` +
       `</span>` +
-    `</button>`
-  ).join('');
+    `</button>`;
 
-  $$('.deck').forEach(b => b.addEventListener('click', () => pickLevel(b.dataset.level, b)));
+  $('#deckhost .deck').addEventListener('click', e => pickLevel(state.pick, e.currentTarget));
+}
+
+/* 切换首屏显示哪一层 */
+function setPick(lv){
+  if (state.busy || lv === state.pick) return;
+  state.pick = lv;
+  paintPick();
+  const host = $('#deckhost');
+  host.classList.remove('swap');
+  void host.offsetWidth;
+  host.classList.add('swap');          // 换层时轻轻动一下，让人看到确实切了
+}
+
+function paintPick(){
+  $$('[data-pick]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pick === state.pick)));
+  $('#deck-plate').textContent = `Level 0${state.pick.slice(1)}`;
+  const d = $('#deckhost .deck');
+  if (d) d.setAttribute('aria-label', `${CONFIG.levels[state.pick].name}, show where my car is`);
 }
 
 /* ---------- 平面图 ---------- */
@@ -312,7 +326,7 @@ async function pickLevel(lv, node){
   if (state.busy) return;
   state.busy = true;
 
-  $$('.deck').forEach(g => g.classList.add(g === node ? 'is-picked' : 'is-dimmed'));
+  node.classList.add('is-picked');
   $('#home').classList.add('is-leaving');
 
   const ready = Promise.all([locate(), wait(CONFIG.findingDelay)]);
@@ -326,7 +340,7 @@ async function pickLevel(lv, node){
   showFinding(false);
 
   $('#home').classList.remove('is-leaving');
-  $$('.deck').forEach(g => g.classList.remove('is-picked', 'is-dimmed'));
+  $$('.deck').forEach(g => g.classList.remove('is-picked'));
   state.busy = false;
 }
 
@@ -337,6 +351,8 @@ function openDetail(){
 
 /* ---------- 接线 ---------- */
 renderStage();
+paintPick();
+$$('[data-pick]').forEach(b => b.addEventListener('click', () => setPick(b.dataset.pick)));
 $$('.seg button').forEach(b => b.addEventListener('click', () => renderLevel(b.dataset.level, true)));
 $$('[data-back]').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.reset) state.gps = null;
