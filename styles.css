@@ -167,10 +167,34 @@ img{display:block;max-width:100%}
 .planbox .empty small{font-size:12px}
 .overlay{position:absolute;inset:0}
 
-.zone{position:absolute;border:3px solid var(--red);border-radius:2px}
-.zone b{position:absolute;left:-3px;top:100%;margin-top:3px;
-  background:var(--red);color:var(--on-red);font-size:12px;font-weight:700;
-  padding:2px var(--s2);white-space:nowrap}
+/* ---------- 屏 2：官方楼层图 + 可点的停车区 ---------- */
+.planbox.is-plan{background:var(--card);overflow:hidden}
+.planbox.is-plan .empty{display:none}
+.planmap{display:block;width:100%;height:100%}
+
+/* 停车区：底图是静态的，只有这些多边形能点 */
+.pz{cursor:pointer}
+.pz-fill{fill:var(--pc);fill-opacity:.42;stroke:var(--pc);stroke-opacity:.9;
+  stroke-linejoin:round;transition:fill-opacity .18s}
+.pz-tag{fill:#fff;stroke:rgba(0,0,0,.6);paint-order:stroke fill;
+  font-weight:700;letter-spacing:.01em;pointer-events:none}
+.pz:hover .pz-fill,.pz:focus-visible .pz-fill{fill-opacity:.68}
+.pz:focus-visible{outline:none}
+.pz:focus-visible .pz-fill{stroke:var(--ink);stroke-opacity:1}
+
+/* 自己的车所在那块：红色只用在这里 */
+.pz.is-mine .pz-fill{stroke:var(--red);stroke-opacity:1;fill-opacity:.55}
+.pz.is-mine .pz-tag{stroke:rgba(0,0,0,.72)}
+
+/* 车的位置 */
+.carmark{pointer-events:none}
+.carmark-halo{fill:var(--red);opacity:.16}
+.carmark-dot{fill:var(--red);stroke:#fff}
+.carmark-eye{fill:#fff}
+@keyframes car-land{0%{transform:scale(2.4);opacity:0}60%{transform:scale(.92);opacity:1}
+                    100%{transform:scale(1);opacity:1}}
+.carmark.drop{animation:car-land .5s cubic-bezier(.2,.7,.3,1.2) both;transform-box:fill-box;
+  transform-origin:50% 50%}
 
 /* 图钉 */
 .pin{position:absolute;width:0;height:0;z-index:2}

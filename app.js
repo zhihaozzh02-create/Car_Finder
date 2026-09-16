@@ -11,15 +11,18 @@ const CONFIG = {
   levels: {
     L1: {
       name: 'Level 1',
-      plan: { image: '', aspect: '4 / 3' },          // 楼层平面图，空 = 显示占位格
-      car:  { carpark: 'P6', x: 62, y: 60,           // pin 在平面图上的位置（百分比，左上角 0,0）
-              zone: { x: 46, y: 42, w: 32, h: 27 } } // 红框圈出的停车场范围
+      /* 静态底图：商场官方楼层图，透视矫正 + 去色偏后的版本。w/h 是图片像素尺寸，
+         zones 的坐标就在这个像素空间里 */
+      plan: { image: '', w: 0, h: 0 },
+      /* 可点击的停车区。park 指向 CARPARKS 里的编号，pts 是 "x y,x y,..." */
+      zones: [],
+      car:  { carpark: 'P6', x: 62, y: 60 }   // pin 位置，底图宽高的百分比；不填就落在所属区域的中心
     },
     L2: {
       name: 'Level 2',
-      plan: { image: '', aspect: '4 / 3' },
-      car:  { carpark: 'P10', x: 72, y: 50,
-              zone: { x: 57, y: 33, w: 30, h: 25 } }
+      plan: { image: '', w: 0, h: 0 },
+      zones: [],
+      car:  { carpark: 'P10', x: 72, y: 50 }
     }
   },
 
@@ -73,20 +76,20 @@ const CENTRE = {
     { id:'P20', lv:'', park:'P20', pts:'187 0,216 24,114 33,91 10,186 1' },
     { id:'B1', lv:'', bldg:true, pts:'289 37,400 41,367 68,368 77,390 77,391 100,389 84,381 84,368 95,156 87,151 83,155 82,245 75,288 38' },
     { id:'P19', lv:'', park:'P19', pts:'151 110,214 114,230 127,131 136,107 114,150 111' },
-    { id:'P8', lv:'', park:'P8', pts:'857 3,999 7,997 32,970 53,962 53,950 67,949 58,927 61,925 85,917 91,809 103,782 86,780 69,731 67,729 42,756 21,831 22,856 4' },
+    { id:'P8', lv:'L2', park:'P8', pts:'857 3,999 7,997 32,970 53,962 53,950 67,949 58,927 61,925 85,917 91,809 103,782 86,780 69,731 67,729 42,756 21,831 22,856 4' },
     { id:'P15', lv:'L2', park:'P15', pts:'76 210,96 216,147 257,43 265,40 285,3 255,0 235,75 211' },
     { id:'P17', lv:'L2', park:'P17', pts:'91 210,165 214,176 236,223 237,243 248,147 256,91 211' },
-    { id:'P11', lv:'L2', park:'P11', pts:'274 198,396 202,378 217,257 215,169 212,169 207,273 199' },
+    { id:'P11', lv:'L1', park:'P11', pts:'274 198,396 202,378 217,257 215,169 212,169 207,273 199' },
     { id:'P22', lv:'L2', park:'P22', pts:'409 224,756 233,756 247,393 237,408 225' },
-    { id:'B2', lv:'L2', bldg:true, pts:'839 233,977 236,976 249,975 243,966 243,898 288,795 298,771 284,779 278,777 268,708 267,672 293,614 292,615 281,532 279,512 294,273 288,89 304,43 268,241 252,245 247,261 249,274 239,817 249,838 234' },
+    { id:'B2', lv:'L1 L2', bldg:true, pts:'839 233,977 236,976 249,975 243,966 243,898 288,795 298,771 284,779 278,777 268,708 267,672 293,614 292,615 281,532 279,512 294,273 288,89 304,43 268,241 252,245 247,261 249,274 239,817 249,838 234' },
     { id:'P10', lv:'L2', park:'P10', pts:'282 291,402 295,384 309,374 309,187 303,182 299,281 292' },
     { id:'P7', lv:'L2', park:'P7', pts:'727 269,774 270,779 274,769 274,726 307,514 301,532 283,613 285,612 295,679 296,710 272,726 270' },
     { id:'P21', lv:'L1', park:'P21', pts:'654 375,685 377,653 397,384 388,400 378,653 376' },
-    { id:'B3', lv:'L1', bldg:true, pts:'734 378,805 380,805 392,832 393,824 403,825 413,866 413,869 400,882 394,959 397,888 442,786 451,772 446,615 441,597 454,502 451,501 459,494 461,494 445,479 444,497 442,513 430,512 421,414 418,385 440,291 438,303 429,302 420,261 412,326 398,337 390,700 402,733 379' },
-    { id:'P13', lv:'L1', park:'P13', pts:'422 421,520 425,489 444,395 441,421 422' },
-    { id:'P14', lv:'L1', park:'P14', pts:'166 430,191 444,188 448,112 453,92 437,165 431' },
+    { id:'B3', lv:'L1 L2', bldg:true, pts:'734 378,805 380,805 392,832 393,824 403,825 413,866 413,869 400,882 394,959 397,888 442,786 451,772 446,615 441,597 454,502 451,501 459,494 461,494 445,479 444,497 442,513 430,512 421,414 418,385 440,291 438,303 429,302 420,261 412,326 398,337 390,700 402,733 379' },
+    { id:'P13', lv:'', park:'P13', pts:'422 421,520 425,489 444,395 441,421 422' },
+    { id:'P14', lv:'L2', park:'P14', pts:'166 430,191 444,188 448,112 453,92 437,165 431' },
     { id:'P6', lv:'L1', park:'P6', pts:'622 445,740 449,740 468,730 472,726 458,610 454,621 446' },
-    { id:'AQUA', lv:'', park:'P4', pts:'808 485,969 489,969 494,959 495,954 504,940 504,879 545,762 554,753 548,714 547,693 561,505 553,574 506,713 511,731 499,781 501,807 486' },
+    { id:'AQUA', lv:'L1', park:'P4', pts:'808 485,969 489,969 494,959 495,954 504,940 504,879 545,762 554,753 548,714 547,693 561,505 553,574 506,713 511,731 499,781 501,807 486' },
     { id:'BLUE', lv:'', park:'P2', pts:'816 594,942 598,941 614,941 605,932 604,869 641,763 649,711 643,693 655,509 647,540 627,672 633,729 597,806 600,815 595' },
     { id:'P1', lv:'', park:'P1', pts:'749 698,909 704,908 720,858 748,744 755,698 745,698 729,748 699' }  ]
 };
@@ -112,7 +115,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const parkName = id => (CARPARKS[id] || ['?', '#888'])[0];
 const parkFill = id => (CARPARKS[id] || ['?', '#888'])[1];
 
-const state = { level: 'L1', pick: 'L1', gps: null, busy: false };
+const state = { level: 'L1', pick: 'L1', detail: null, gps: null, busy: false };
 
 /* 由本色算出侧面的深浅：太深的颜色改成往亮里混，免得糊成一片 */
 function sideColour(hex, amount){
@@ -150,6 +153,9 @@ function slab(pts, lift, height, topFill, sideFill){
   out += `<polygon class="top" points="${ring.map(p => p.join(',')).join(' ')}" fill="${topFill}"/>`;
   return out;
 }
+
+/* 楼层图上的多边形：像素坐标，不做压扁 */
+const parseZone = str => str.split(',').map(p => p.trim().split(/\s+/).map(Number));
 
 const parsePts = str => str.split(',').map(p => {
   const [x, y] = p.split(' ').map(Number);
@@ -354,44 +360,109 @@ function pin(x, y, o){
   return wrap;
 }
 
+/* 多边形的重心，用来放标签和默认的 pin 位置 */
+function centroid(pts){
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0; i < pts.length; i++){
+    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length];
+    const f = x1 * y2 - x2 * y1;
+    a += f; cx += (x1 + x2) * f; cy += (y1 + y2) * f;
+  }
+  if (!a) return pts[0] || [0, 0];
+  return [cx / (3 * a), cy / (3 * a)];
+}
+
+/* 屏 2：商场楼层图当静态底图，停车区是画在上面的可点多边形 */
 function renderLevel(lv, drop){
   state.level = lv;
-  const L = CONFIG.levels[lv], id = L.car.carpark, info = CONFIG.carparks[id];
+  const L = CONFIG.levels[lv], mine = L.car.carpark, info = CONFIG.carparks[mine];
 
-  $('#level-swatch').style.background = parkFill(id);
-  $('#level-title').textContent = parkName(id);
+  $('#level-swatch').style.background = parkFill(mine);
+  $('#level-title').textContent = parkName(mine);
   $('#level-sub').textContent = `Your car is here, ${L.name}` +
     (state.gps ? ` · GPS accuracy ±${Math.round(state.gps.coords.accuracy)} m` : '');
+  $$('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.level === lv)));
 
   const box = $('#level-plan');
-  box.style.aspectRatio = L.plan.aspect;
-  setPlan(box, L.plan.image, `${L.name} map`);
+  const zones = L.zones || [];
 
-  const layer = $('#level-overlay');
-  layer.innerHTML = '';
-  if (L.car.zone){
-    const z = L.car.zone, el = document.createElement('div');
-    el.className = 'zone';
-    el.style.cssText = `left:${z.x}%;top:${z.y}%;width:${z.w}%;height:${z.h}%`;
-    el.innerHTML = `<b>${esc(parkName(id))}</b>`;
-    layer.appendChild(el);
+  /* 还没放楼层图时，退回原来的占位格子 */
+  if (!L.plan.image || !zones.length){
+    box.classList.remove('is-plan');
+    box.style.aspectRatio = '4 / 3';
+    setPlan(box, '', `${L.name} map`);
+    $('#level-overlay').innerHTML = '';
+    $('#level-note').textContent = `${L.name} plan coming.`;
+    return;
   }
-  const first = info.tips[0] || { title: parkName(id), image: '', alt: 'photo' };
-  layer.appendChild(pin(L.car.x, L.car.y, {
-    title: first.title, note: 'Car park map',
-    thumb: first.image, thumbAlt: first.alt, drop, onTap: openDetail
-  }));
 
-  $('#level-note').textContent = `Tap the pin for the ${parkName(id)} map.`;
-  $$('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.level === lv)));
+  box.classList.add('is-plan');
+  box.style.aspectRatio = `${L.plan.w} / ${L.plan.h}`;
+  setPlan(box, '', '');
+
+  const u = L.plan.w / 1000;        // 底图分辨率不同，尺寸都按这个单位缩放
+  const parsed = zones.map(z => ({ ...z, poly: parseZone(z.pts) }));
+  const my = parsed.find(z => z.park === mine);
+  const car = L.car.x != null && L.car.y != null
+    ? [L.car.x / 100 * L.plan.w, L.car.y / 100 * L.plan.h]
+    : (my ? centroid(my.poly) : [L.plan.w / 2, L.plan.h / 2]);
+
+  const body = parsed.map(z => {
+    const d = z.poly.map(p => p.join(',')).join(' ');
+    const isMine = z.park === mine;
+    const [lx, ly] = centroid(z.poly);
+    return `<g class="pz${isMine ? ' is-mine' : ''}" role="button" tabindex="0" ` +
+      `data-park="${esc(z.park)}" aria-label="${esc(parkName(z.park))}` +
+      `${isMine ? ', where your car is' : ''}. Open this car park">` +
+      `<polygon class="pz-fill" points="${d}" style="--pc:${parkFill(z.park)}" ` +
+        `stroke-width="${(3 * u).toFixed(1)}"/>` +
+      `<text class="pz-tag" x="${lx.toFixed(0)}" y="${ly.toFixed(0)}" text-anchor="middle" ` +
+        `dominant-baseline="central" font-size="${(26 * u).toFixed(1)}" ` +
+        `stroke-width="${(4.5 * u).toFixed(1)}">${esc(z.name || parkName(z.park))}</text>` +
+    `</g>`;
+  }).join('');
+
+  const px = car[0].toFixed(0), py = car[1].toFixed(0);
+  const marker =
+    `<g class="carmark${drop ? ' drop' : ''}" transform="translate(${px},${py})">` +
+      `<circle class="carmark-halo" r="${(46 * u).toFixed(1)}"/>` +
+      `<circle class="carmark-dot" r="${(15 * u).toFixed(1)}" ` +
+        `stroke-width="${(5 * u).toFixed(1)}"/>` +
+      `<circle class="carmark-eye" r="${(4.5 * u).toFixed(1)}"/>` +
+    `</g>`;
+
+  $('#level-overlay').innerHTML =
+    `<svg viewBox="0 0 ${L.plan.w} ${L.plan.h}" xmlns="http://www.w3.org/2000/svg" ` +
+      `class="planmap" role="group" aria-label="${esc(L.name)} plan, tap a car park">` +
+      `<image href="${esc(L.plan.image)}" x="0" y="0" width="${L.plan.w}" height="${L.plan.h}" ` +
+        `preserveAspectRatio="none"/>` +
+      `<g class="pzs">${body}</g>${marker}` +
+    `</svg>`;
+
+  $$('#level-overlay .pz').forEach(g => {
+    const open = () => openDetail(g.dataset.park);
+    g.addEventListener('click', open);
+    g.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); }
+    });
+  });
+
+  $('#level-note').textContent = my
+    ? `Your car is in the ${parkName(mine)}. Tap any car park to see it.`
+    : 'Tap a car park to see it.';
 }
 
 function renderDetail(){
-  const L = CONFIG.levels[state.level], id = L.car.carpark, info = CONFIG.carparks[id];
+  const L = CONFIG.levels[state.level];
+  const id = state.detail || L.car.carpark;
+  const mine = id === L.car.carpark;
+  const info = CONFIG.carparks[id] || { detail: { image: '', aspect: '4 / 3', car: { x: 50, y: 50 } }, tips: [] };
 
   $('#detail-swatch').style.background = parkFill(id);
   $('#detail-title').textContent = parkName(id);
-  $('#detail-sub').textContent = `${L.name}, car park map`;
+  $('#detail-sub').textContent = mine
+    ? `${L.name} · your car is here`
+    : `${L.name}, car park map`;
 
   const box = $('#detail-plan');
   box.style.aspectRatio = info.detail.aspect;
@@ -399,7 +470,7 @@ function renderDetail(){
 
   const layer = $('#detail-overlay');
   layer.innerHTML = '';
-  layer.appendChild(pin(info.detail.car.x, info.detail.car.y, { title: 'Your car', drop: true }));
+  if (mine) layer.appendChild(pin(info.detail.car.x, info.detail.car.y, { title: 'Your car', drop: true }));
 
   $('#detail-tips').innerHTML = info.tips.map(t =>
     `<li>${thumb(t.image, t.alt)}<div><b>${esc(t.title)}</b><small>${esc(t.note)}</small></div></li>`
@@ -456,7 +527,8 @@ async function pickLevel(lv, node){
   state.busy = false;
 }
 
-function openDetail(){
+function openDetail(park){
+  state.detail = park || CONFIG.levels[state.level].car.carpark;
   renderDetail();
   show('detail', 'fwd');
 }
