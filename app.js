@@ -719,7 +719,9 @@ function renderLevel(lv, drop){
     });
   });
 
-  makeZoomable($('#level-overlay svg'));
+  const lvlSvg = $('#level-overlay svg');
+  makeZoomable(lvlSvg);
+  hitFallback(lvlSvg, '.pz', g => tapThen(g, () => openDetail(g.dataset.park)));
 
   $('#level-note').textContent = my
     ? `Your car is in the ${parkName(mine)}${car.ref ? ', ' + car.ref : ''}. Tap a car park to see its bays.`
@@ -805,7 +807,9 @@ function renderDetail(){
       if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); tapThen(el, pick); }
     });
   });
-  makeZoomable(layer.querySelector('svg'));
+  const detSvg = layer.querySelector('svg');
+  makeZoomable(detSvg);
+  hitFallback(detSvg, '.bay', el => tapThen(el, () => askPark(id, +el.dataset.bay)));
 
   $('#detail-tips').innerHTML = (info.tips || []).map(t =>
     `<li>${thumb(t.image, t.alt)}<div><b>${esc(t.title)}</b><small>${esc(t.note)}</small></div></li>`).join('');
@@ -816,6 +820,23 @@ function renderDetail(){
    单指拖动 = 平移，双指 = 捏合，滚轮 / 双击也支持
    ========================================================= */
 const MINK = 1, MAXK = 16;
+
+/* 指针可能已经抬起了，捕获会抛，包一层 */
+function grab(el, id){
+  try { el.setPointerCapture(id); return true; } catch (e) { return false; }
+}
+
+/* 兜底：万一 click 因为指针捕获之类的原因没落到目标元素上，
+   就用指针位置反查一次。不加这层的话，这类问题会静默地让整个地图点不动 */
+function hitFallback(svg, sel, run){
+  svg.addEventListener('click', e => {
+    if (svg.dataset.moved === '1') return;
+    if (e.target.closest && e.target.closest(sel)) return;   // 元素自己已经处理了
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const el = under && under.closest && under.closest(sel);
+    if (el) run(el);
+  });
+}
 
 function makeZoomable(svg){
   if (!svg || svg.dataset.zoom) return;
@@ -855,15 +876,18 @@ function makeZoomable(svg){
     apply();
   };
 
-  let downAt = null;
+  let downAt = null, captured = false;
   svg.addEventListener('pointerdown', e => {
-    svg.setPointerCapture(e.pointerId);
+    /* 这里绝对不能马上 setPointerCapture：一旦捕获，pointerdown/up 都被重定向到 svg，
+       浏览器就把 click 派到 svg 而不是停车区，区域上的监听器永远收不到。
+       等真的开始拖了再捕获 */
     pts.set(e.pointerId, toUser(e));
     svg.dataset.moved = '0';
     downAt = [e.clientX, e.clientY];
     if (pts.size === 2){
       const [a, b] = [...pts.values()];
       pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), k: view.k };
+      if (!captured) captured = grab(svg, e.pointerId);   // 双指必然是手势
     }
   });
 
@@ -879,16 +903,22 @@ function makeZoomable(svg){
       svg.dataset.moved = '1';
     } else if (pts.size === 1){
       /* 「算不算拖动」按屏幕像素判断 —— 用 viewBox 单位会小到一点就误判 */
-      if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 9) svg.dataset.moved = '1';
-      view.x += now[0] - prev[0];
-      view.y += now[1] - prev[1];
-      apply();
+      if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 9){
+        svg.dataset.moved = '1';
+        if (!captured) captured = grab(svg, e.pointerId);   // 拖起来了再捕获
+      }
+      if (svg.dataset.moved === '1'){
+        view.x += now[0] - prev[0];
+        view.y += now[1] - prev[1];
+        apply();
+      }
     }
   });
 
   const drop = e => {
     pts.delete(e.pointerId);
     if (pts.size < 2) pinch = null;
+    if (!pts.size) captured = false;
   };
   svg.addEventListener('pointerup', drop);
   svg.addEventListener('pointercancel', drop);
