@@ -11,12 +11,12 @@ No build step, no dependencies - open `index.html` in a browser.
   "Can't Find Your Car?" sign; the 3D model on screen 1 is traced from it
 
 ## Flow (3 screens)
-1. **Home** (`#home`): nothing but the 3D model, drawn as **two stacked decks** - L2 above L1,
-   centred in the viewport. There is deliberately no top bar, no visible heading and no caption -
-   the two decks are the entire screen. Each deck is a real `<button class="deck">` holding an
-   HTML label (`.deck-tag`) and the plate SVG (`.deck-art`); the model *is* the control.
-   A visually hidden `<h1 class="sr-only">` keeps the screen named for screen readers and is what
-   `show()` moves focus to. **Do not add a heading, a hint line or L1 / L2 buttons back.**
+1. **Home** (`#home`): an L1 / L2 pill switch, **one level's model**, and a small drawing-sheet
+   caption (`LEVEL 01`). There is deliberately no top bar, no visible heading and no hint line.
+   The model is a real `<button class="deck">` - tapping it opens that level. A visually hidden
+   `<h1 class="sr-only">` keeps the screen named for screen readers and is what `show()` focuses.
+   **Never show both levels at once.** An earlier version stacked two decks and the client read the
+   rows of slabs as a stack of floors, which is exactly the confusion the floor plate now prevents.
 2. **Level plan** (`#level`): floor plan of the chosen level. Red zone = the user's car park,
    red pin = the car, a callout sits on the pin. Tapping the pin opens screen 3.
    The L1 / L2 segmented control in the top bar switches level without re-running the search.
@@ -29,34 +29,43 @@ No build step, no dependencies - open `index.html` in a browser.
    `useRealGPS` is `false` by default.
 2. `CARPARKS` - each car park's display name and sign colour. Used for the titles, the colour
    swatch and the model.
-3. `CENTRE` - the traced outlines. **These are not hand-authored**: each shape was extracted from
-   `images/reference-sign.jpg` by flood-filling the sign's colour regions and simplifying the
-   contour, so the silhouettes (the notches on P8/P9, the wedges on P15-P18, the stepped aqua and
-   blue bands) match the real sign. Coordinates are already-projected picture coordinates in a
+3. `CENTRE` - the traced outlines plus `plate`, the floor outline. **These are not hand-authored**:
+   each shape was extracted from `images/reference-sign.jpg` by flood-filling the sign's colour
+   regions and simplifying the contour, so the silhouettes (the notches on P8/P9, the wedges on
+   P15-P18, the stepped aqua and blue bands) match the real sign. `plate` is the convex hull of
+   every shape, offset outward by 34. Coordinates are already-projected picture coordinates in a
    999 x 755 box - there is no separate plan space. One shape can cover two car parks
    (`AQUA` = P4 + P5, `BLUE` = P2 + P3), exactly as the sign draws them.
-4. `MODEL` - how one deck is drawn: `squash` (1 = the sign's exact proportions, but the stack gets
-   very tall), `depth` (deck thickness), `pad` (canvas margin). The spacing between the two decks
-   and the size of the L1 / L2 labels are CSS, not JS - see `.decks` and `.deck-tag` in
-   `styles.css`. Both decks share one rendered plate; `deck()` is called once in `renderStage()`.
+4. `MODEL` - how one level is built: `squash` (1 = the sign's exact proportions), `floor` (how thick
+   the floor plate is), `zone` (how far a car park sits above the plate - keep it thin, they are
+   painted areas), `tower` (how tall the shopping centre masses stand; raising them too far hides
+   the car parks behind them - 15 is about the limit), `margin`.
 
 To swap in a floor plan: drop the file in `images/`, set `image: 'images/L1.png'`, set `aspect` to
 the image's real width / height, then tune the pin and zone percentages against the image.
 
 ## Rendering notes
-- `slab()` extrudes a polygon straight down. It normalises the winding, then draws a wall for
-  every edge whose projected direction has a negative x - those are the faces turned toward the
-  viewer - and finally lays the top face over them.
-- Shapes are painted back-to-front by their lowest point (painter's algorithm), so the decks
-  overlap the way they do on the sign.
-- Model outlines use `vector-effect: non-scaling-stroke` so they stay hairline at any size.
+- **One floor plate = one level.** `deck()` draws the plate first, then the car park zones and the
+  building masses on top of it. This is load-bearing: floating slabs read as a stack of floors.
+- `slab(pts, lift, height, top, side)` raises a polygon by `lift` and extrudes it down by `height`.
+  It normalises the winding, then draws a wall for every edge whose direction has a negative x -
+  those are the faces turned toward the viewer - and lays the top face over them.
+- Shapes are painted back-to-front by their lowest point (painter's algorithm).
+- **Materials, not outlines.** Walls are filled with a per-colour vertical gradient (lit at the top
+  edge, shaded at the bottom) built by `wallGrads()`; top faces are flat matte with one hairline
+  `--edge` highlight. The plate and the building masses each get an `feDropShadow`. There are no
+  keylines anywhere - if you find yourself adding a stroke to a wall, stop.
 
 ## Design rules (keep these)
+- The model is styled as **a photograph of a physical architectural scale model**: matte materials,
+  believable light from above, soft shadows, a studio backdrop that fades into the page.
+  The client explicitly rejected the earlier flat Bauhaus look - do not reintroduce keylines,
+  square hard-edged cards or a purely flat treatment.
 - One task per screen. Big tap targets, short sentence-case copy, no extra buttons or banners.
 - Colour is semantic: black / white is the interface, **red only ever means "your car"**
-  (pin, zone, the picked deck). Car park colours appear only inside the model and on the swatch.
-  Never colour-code L1 / L2 - it would clash with "P2 Blue" / "P17 Yellow".
-- Flat: no gradients. Elevation is a hard offset shadow (`--lift`), never a blur.
+  (pin, zone, the picked level). Car park colours appear only inside the model and on the swatch,
+  and they must stay recognisable against the physical sign - shift value for material realism,
+  never hue. Never colour-code L1 / L2 - it would clash with "P2 Blue" / "P17 Yellow".
 - Font: Jost (Google Fonts) with system fallbacks.
 - Light / dark both have to work - define colours as tokens under `:root`, never inline.
 - Respect `prefers-reduced-motion` (one rule at the bottom of `styles.css` turns everything off)

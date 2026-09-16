@@ -69,6 +69,8 @@ const CARPARKS = {
     一块图形可能包含两个停车场（AQUA = P4+P5，BLUE = P2+P3），和牌子一样。   */
 const CENTRE = {
   w: 999, h: 755,
+  /* 地板（模型底座）：所有内容的凸包外扩 34，一层就是这一整块 */
+  plate: '-35 231,67 -22,185 -34,858 -31,1035 -26,1003 499,974 623,936 743,868 781,741 789,687 777,94 482,65 459,-30 265',
   shapes: [
     { id:'P20', park:'P20', pts:'187 0,216 24,114 33,91 10,186 1' },
     { id:'B1', bldg:true, pts:'289 37,400 41,367 68,368 77,390 77,391 100,389 84,381 84,368 95,156 87,151 83,155 82,245 75,288 38' },
@@ -94,9 +96,11 @@ const CENTRE = {
 /* ---------- 4. 楼层模型的摆放 ---------- */
 /*  切换条、层号的排版都在 styles.css 里（.pick / .plate）  */
 const MODEL = {
-  squash: 0.90,   // 楼板纵向压扁比例（1 = 和牌子完全同比例）
-  depth:  13,     // 楼板厚度
-  pad:    16      // 画布留白
+  squash: 0.90,   // 纵向压扁比例（1 = 和牌子完全同比例）
+  floor:  26,     // 地板本身的厚度 —— 这一整块就代表「一层」
+  zone:    6,     // 停车场区域高出地板多少（薄薄一层，像铺在地上的色块）
+  tower:  15,     // 商场楼从地板上立起多高（太高会挡住北边的停车场）
+  margin: 18      // 画布留白
 };
 
 /* =========================================================
@@ -121,52 +125,99 @@ function sideColour(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-/* 把一块多边形画成有厚度的楼板：先画朝向观众的侧墙，再盖上顶面 */
-function slab(pts, topFill, sideFill){
+/* 把一块多边形抬高 lift、挤出 height 的厚度画出来
+   lift = 顶面离地板面多高，height = 侧墙多高。地板自己 lift=0、height=厚度 */
+function slab(pts, lift, height, topFill, sideFill){
   let area = 0;
   for (let i = 0; i < pts.length; i++){
     const a = pts[i], b = pts[(i + 1) % pts.length];
     area += a[0]*b[1] - b[0]*a[1];
   }
-  const ring = area < 0 ? pts.slice().reverse() : pts;   // 统一绕向，侧墙判断才准
+  const ring = (area < 0 ? pts.slice().reverse() : pts)   // 统一绕向，侧墙判断才准
+    .map(p => [p[0], +(p[1] - lift).toFixed(1)]);
 
   const walls = [];
   for (let i = 0; i < ring.length; i++){
     const a = ring[i], b = ring[(i + 1) % ring.length];
-    if (b[0] - a[0] < 0) walls.push([a, b]);             // 这条边朝着观众，要画墙
+    if (b[0] - a[0] < 0) walls.push([a, b]);              // 这条边朝着观众，要画墙
   }
   walls.sort((u, v) => (u[0][1] + u[1][1]) - (v[0][1] + v[1][1]));
 
   let out = '';
   for (const [a, b] of walls){
     out += `<polygon class="wall" points="${a[0]},${a[1]} ${b[0]},${b[1]} ` +
-           `${b[0]},${b[1] + MODEL.depth} ${a[0]},${a[1] + MODEL.depth}" fill="${sideFill}"/>`;
+           `${b[0]},${(b[1] + height).toFixed(1)} ${a[0]},${(a[1] + height).toFixed(1)}" fill="${sideFill}"/>`;
   }
   out += `<polygon class="top" points="${ring.map(p => p.join(',')).join(' ')}" fill="${topFill}"/>`;
   return out;
 }
 
-/* 画一层楼板：整份中心结构纵向压扁 */
-function deck(){
-  const shapes = CENTRE.shapes.map(s => ({
-    ...s,
-    pts: s.pts.split(',').map(p => {
-      const [x, y] = p.split(' ').map(Number);
-      return [x, +(y * MODEL.squash).toFixed(1)];
-    })
-  }));
-  shapes.sort((a, b) => Math.max(...a.pts.map(p => p[1])) - Math.max(...b.pts.map(p => p[1])));
+const parsePts = str => str.split(',').map(p => {
+  const [x, y] = p.split(' ').map(Number);
+  return [x, +(y * MODEL.squash).toFixed(1)];
+});
 
-  return shapes.map(s => s.bldg
-    ? slab(s.pts, 'var(--bldg)', 'var(--bldg-side)')
-    : slab(s.pts, parkFill(s.park), sideColour(parkFill(s.park), 0.3))
-  ).join('');
+/* 侧面不用纯色，用一条上亮下暗的渐变 —— 哑光材质在顶光下就是这样 */
+function wallGrads(){
+  const out = {}, defs = [];
+  for (const id in CARPARKS){
+    const hex = parkFill(id), key = 'w' + hex.slice(1);
+    if (out[hex]) continue;
+    out[hex] = `url(#${key})`;
+    defs.push(`<linearGradient id="${key}" x1="0" y1="0" x2="0" y2="1">` +
+      `<stop offset="0" stop-color="${sideColour(hex, .14)}"/>` +
+      `<stop offset="1" stop-color="${sideColour(hex, .44)}"/></linearGradient>`);
+  }
+  return { map: out, defs: defs.join('') };
+}
+
+/* 固定的那几条渐变和滤镜：地板、商场楼、接地投影 */
+const MODEL_DEFS =
+  `<linearGradient id="w-floor" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0" stop-color="var(--floor-side-1)"/>` +
+    `<stop offset="1" stop-color="var(--floor-side-2)"/></linearGradient>` +
+  `<linearGradient id="w-bldg" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0" stop-color="var(--bldg-side-1)"/>` +
+    `<stop offset="1" stop-color="var(--bldg-side-2)"/></linearGradient>` +
+  `<filter id="drop-floor" x="-12%" y="-12%" width="130%" height="140%">` +
+    `<feDropShadow dx="7" dy="16" stdDeviation="15" flood-color="var(--shade)" flood-opacity=".9"/>` +
+  `</filter>` +
+  `<filter id="drop-mass" x="-30%" y="-30%" width="180%" height="200%">` +
+    `<feDropShadow dx="3" dy="5" stdDeviation="4" flood-color="var(--shade)" flood-opacity=".75"/>` +
+  `</filter>`;
+
+/* 画一层：一整块地板，停车场铺在地板上，商场楼从地板上立起来。
+   整块地板就代表「一层」—— 不再是一摞悬空的板子 */
+function deck(){
+  const g = wallGrads();
+
+  let body = `<g filter="url(#drop-floor)">` +
+    slab(parsePts(CENTRE.plate), 0, MODEL.floor, 'var(--floor)', 'url(#w-floor)') +
+  `</g>`;
+
+  const items = CENTRE.shapes.map(s => ({ ...s, pts: parsePts(s.pts) }));
+  items.sort((a, b) => Math.max(...a.pts.map(p => p[1])) - Math.max(...b.pts.map(p => p[1])));
+
+  for (const s of items){
+    body += s.bldg
+      ? `<g filter="url(#drop-mass)">` +
+          slab(s.pts, MODEL.tower, MODEL.tower, 'var(--bldg)', 'url(#w-bldg)') +
+        `</g>`
+      : slab(s.pts, MODEL.zone, MODEL.zone, parkFill(s.park), g.map[parkFill(s.park)]);
+  }
+  return `<defs>${MODEL_DEFS}${g.defs}</defs>${body}`;
 }
 
 /* 屏 1：一次只画一层。L1 / L2 只是换个名字——同一座停车楼，两层轮廓本来就一样 */
 function renderStage(){
-  const plateH = CENTRE.h * MODEL.squash + MODEL.depth;
-  const vb = [-MODEL.pad, -MODEL.pad, CENTRE.w + MODEL.pad * 2, plateH + MODEL.pad * 2].join(' ');
+  const plate = parsePts(CENTRE.plate);
+  const xs = plate.map(p => p[0]), ys = plate.map(p => p[1]);
+  const tops = CENTRE.shapes.filter(s => s.bldg)
+    .flatMap(s => parsePts(s.pts).map(p => p[1] - MODEL.tower));
+  const m = MODEL.margin;
+  const x0 = Math.min(...xs) - m, x1 = Math.max(...xs) + m;
+  const y0 = Math.min(...ys, ...tops) - m, y1 = Math.max(...ys) + MODEL.floor + m;
+  const vb = [x0, y0, x1 - x0, y1 - y0].map(n => n.toFixed(1)).join(' ');
 
   $('#deckhost').innerHTML =
     `<button class="deck" type="button" ` +

@@ -20,9 +20,16 @@
   --red:#e3261b;
   --on-red:#ffffff;
   /* 3D 模型：商场建筑的两个面 + 描边 */
-  --bldg:#eae5da;
-  --bldg-side:#cdc6b7;
-  --model-line:#131416;
+  /* 模型材质：哑光，靠明暗分面，不用描边 */
+  --floor:#cac4b7;          /* 地板顶面：混凝土灰 —— 一整块就是「一层」 */
+  --floor-side-1:#b3ac9d;   /* 地板侧面：上缘受光 */
+  --floor-side-2:#928b7c;   /* 地板侧面：下缘背光 */
+  --bldg:#f7f4ec;           /* 商场楼：石膏白，和地板拉开明度 */
+  --bldg-side-1:#e2dbcd;
+  --bldg-side-2:#c2baa9;
+  --shade:#4a4234;          /* 投影的颜色，暖一点才像影棚 */
+  --edge:rgba(255,255,255,.5);  /* 顶面边缘那一点受光 */
+  --studio-1:#fffdf8;       /* 背景：模型后面那一点柔光，向外淡出 */
   /* 尺度 */
   --s1:4px;  --s2:8px;  --s3:12px; --s4:16px;
   --s5:24px; --s6:32px; --s7:48px;
@@ -35,14 +42,20 @@
     --paper:#0b0c0d; --card:#17191b; --sunk:#202325;
     --ink:#f3f2f0; --ink-2:#9ea0a3; --ink-3:#6f7275;
     --rule:#f3f2f0; --hair:rgba(255,255,255,.18); --lift:rgba(0,0,0,.55);
-    --bldg:#4a4e52; --bldg-side:#35383b; --model-line:rgba(255,255,255,.6);
+    --floor:#34383b; --floor-side-1:#282c2f; --floor-side-2:#1c1f21;
+    --bldg:#5d6268; --bldg-side-1:#474c51; --bldg-side-2:#33373b;
+    --shade:#000000; --edge:rgba(255,255,255,.22);
+    --studio-1:#23272a;
   }
 }
 :root[data-theme="dark"]{
   --paper:#0b0c0d; --card:#17191b; --sunk:#202325;
   --ink:#f3f2f0; --ink-2:#9ea0a3; --ink-3:#6f7275;
   --rule:#f3f2f0; --hair:rgba(255,255,255,.18); --lift:rgba(0,0,0,.55);
-  --bldg:#4a4e52; --bldg-side:#35383b; --model-line:rgba(255,255,255,.6);
+  --floor:#34383b; --floor-side-1:#282c2f; --floor-side-2:#1c1f21;
+  --bldg:#5d6268; --bldg-side-1:#474c51; --bldg-side-2:#33373b;
+  --shade:#000000; --edge:rgba(255,255,255,.22);
+  --studio-1:#23272a;
 }
 
 /* ---------- 基础 ---------- */
@@ -116,10 +129,12 @@ img{display:block;max-width:100%}
 .deckhost{width:100%}
 .deck{display:block;width:100%;border-radius:var(--r);
   transition:transform .28s cubic-bezier(.2,.75,.25,1),opacity .3s}
-.deck-art{display:block}
+.deck-art{display:block;
+  background:radial-gradient(78% 52% at 50% 48%,var(--studio-1) 0%,transparent 72%)}
 .deck-art svg{display:block;width:100%;height:auto}
-.deck .top,.deck .wall{stroke:var(--model-line);stroke-width:.9;stroke-linejoin:round;
-  vector-effect:non-scaling-stroke}
+/* 形体靠明暗，不靠描边；顶面只留一道极细的受光边 */
+.deck .top{stroke:var(--edge);stroke-width:.7;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.deck .wall{stroke:none}
 .deck:hover,.deck:focus-visible{transform:translateY(-8px)}
 .deck.is-picked{transform:translateY(-14px)}
 
