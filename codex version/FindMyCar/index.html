@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e31837">
+  <title>FindMyCar — Garden City Prototype</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/map.css">
+  <link rel="stylesheet" href="css/details.css">
+  <link rel="stylesheet" href="css/map-renderer.css">
+  <link rel="stylesheet" href="css/feedback.css">
+  <link rel="stylesheet" href="css/buttons.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+  <main class="phone" id="prototype" data-floor="L1" aria-label="ParkBack mobile prototype">
+    <section class="view screen home-view is-on" id="home" aria-label="Choose parking level">
+      <header class="home-header">
+        <div class="brand"><span class="brand-mark">P</span><span><strong>ParkBack</strong><small>Garden City car park</small></span></div>
+        <span class="saved-home" id="savedHome" hidden>Saved · L1</span>
+      </header>
+
+      <div class="level-stack" role="group" aria-label="Choose a parking level">
+        <button class="level-card" type="button" data-floor="L2" aria-pressed="false">
+          <svg class="level-model" data-model-floor="L2" viewBox="-35 155 1060 235" preserveAspectRatio="none" role="img" aria-label="Level 2 BIG W floor, assembled from the reference sign proportions"></svg>
+          <span class="level-label"><span class="level-code">L2</span></span>
+        </button>
+        <button class="level-card" type="button" data-floor="L1" aria-pressed="false">
+          <svg class="level-model" data-model-floor="L1" viewBox="55 330 950 220" preserveAspectRatio="none" role="img" aria-label="Level 1 floor above You Are Here, assembled from the reference sign proportions"></svg>
+          <span class="level-label"><span class="level-code">L1</span></span>
+        </button>
+      </div>
+
+      <div class="choose-copy"><strong>Tap to choose your level</strong><span>Each 3D model represents one prototype parking floor.</span></div>
+
+      <div class="search-dock">
+        <div class="search-results" id="searchResults" role="listbox" aria-label="Parking search results" hidden>
+          <button class="search-result" type="button" data-floor="L1"><span class="result-code">L1</span><span><strong>Level 1 · P6 Pink</strong><small>Nearby Entry 1 · Coles</small></span></button>
+          <button class="search-result" type="button" data-floor="L2"><span class="result-code">L2</span><span><strong>Level 2 · P22 Olive</strong><small>Nearby BIG W</small></span></button>
+          <p class="no-result" id="noResult" hidden>No L1 or L2 match. Try “park”, “L1” or “L2”.</p>
+        </div>
+        <div class="search-box">
+          <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="parkingSearch" type="search" placeholder="Search by parking name" aria-label="Search parking by floor, zone or landmark" autocomplete="off">
+          <button class="clear-search" id="clearSearch" type="button" aria-label="Clear parking search" hidden>×</button>
+        </div>
+      </div>
+      <div id="deckhost" hidden></div>
+      <p id="deck-plate" hidden></p>
+    </section>
+
+    <section class="view screen map-view" id="level" aria-label="Selected floor map" aria-hidden="true">
+      <div class="map-canvas">
+        <i class="sr-only" id="level-swatch"></i>
+        <div class="map-floor-title"><small>Parking floor plan</small><strong id="level-title" tabindex="-1">Level 1</strong></div>
+        <p class="sr-only" id="level-sub"></p>
+        <div class="floor-plan-slot planbox" id="level-plan" aria-label="Level 1 floor plan">
+          <img alt="" hidden>
+          <div class="empty"></div>
+          <div class="overlay" id="level-overlay"></div>
+          <div class="map-zoom-controls" aria-label="Map zoom controls">
+            <button id="mapZoomIn" type="button" aria-label="Zoom in">+</button>
+            <button id="mapZoomOut" type="button" aria-label="Zoom out">−</button>
+            <button id="mapZoomAll" type="button" aria-label="Show the complete floor plan">All</button>
+          </div>
+          <span class="map-accuracy" id="mapAccuracy">Approximate GPS area · 5–10 m</span>
+        </div>
+        <p class="sr-only" id="level-note"></p>
+      </div>
+
+      <div class="map-top">
+        <button class="round-button" id="backHome" data-back="home" type="button" aria-label="Back to level selection"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="map-top-right">
+          <div class="floor-switch seg" aria-label="Switch parking level"><button type="button" data-level="L1" aria-pressed="false">L1</button><button type="button" data-level="L2" aria-pressed="false">L2</button></div>
+          <button class="round-button" id="locateButton" type="button" aria-label="Show simulated location"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
+
+      <button class="parking-card" id="parkingInfo" type="button" aria-label="Open parking details">
+        <span class="cue-image"><span><strong id="cueMark">P6</strong><small>Cue photo<br>placeholder</small></span></span>
+        <span class="parking-copy"><span class="overline">Tip</span><span class="details-link">Check details</span></span>
+        <span class="card-arrow" aria-hidden="true">›</span>
+      </button>
+
+      <div class="save-bar"><strong>Save your parking location</strong><button class="confirm-button" id="confirmButton" type="button">Confirm</button></div>
+    </section>
+
+    <section class="view screen details-view" id="detail" aria-label="Parking details" aria-hidden="true">
+      <header class="details-header">
+        <button class="round-button" id="backDetails" data-back="level" type="button" aria-label="Back to floor map"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="details-heading"><small>Parking details</small><strong id="detail-title" tabindex="-1">P6 Pink</strong></div>
+        <span style="width:45px" aria-hidden="true"></span>
+      </header>
+      <div class="details-body" id="detailsBody" data-detail-floor="L1">
+        <i class="sr-only" id="detail-swatch"></i>
+        <p class="sr-only" id="detail-sub"></p>
+        <div class="detail-plan planbox" id="detail-plan" aria-label="Detailed parking bay map">
+          <img alt="" hidden>
+          <div class="empty"></div>
+          <div class="overlay" id="detail-overlay"></div>
+          <span class="detail-hint" id="detailHint">Tap a parking bay to refine the pin</span>
+        </div>
+        <p class="tips-title">Environmental cues</p>
+        <ul class="tips-list tips" id="detail-tips"></ul>
+        <button class="found-button" id="foundButton" data-back="home" data-reset="1" type="button">I found my car</button>
+      </div>
+    </section>
+
+    <div class="finding-overlay" id="locating" hidden role="status" aria-live="polite">
+      <span class="finding-beacon beacon" aria-hidden="true"></span>
+      <p>Finding your car…</p>
+    </div>
+
+    <div class="ask" id="ask" hidden role="dialog" aria-modal="true" aria-labelledby="ask-title">
+      <div class="ask-card">
+        <p class="ask-title" id="ask-title">Did you park here?</p>
+        <p class="ask-where" id="ask-where"></p>
+        <div class="ask-row">
+          <button class="btn-ghost" id="ask-no" type="button">Not here</button>
+          <button class="btn-solid" id="ask-yes" type="button">Yes, my car is here</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">Location saved</div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/home-model.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/map-experience.js"></script>
+</body>
+</html>

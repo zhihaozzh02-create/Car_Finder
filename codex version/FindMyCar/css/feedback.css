@@ -1,0 +1,50 @@
+/* Confirmation dialog, locating state, and toast feedback. */
+.ask { position: absolute; inset: 0; z-index: 60; display: flex; align-items: flex-end; padding: 16px; background: rgba(10,11,12,.42); opacity: 0; transition: opacity .2s ease; }
+.ask.is-on { opacity: 1; }
+.ask-card { width: 100%; padding: 22px; border-radius: 12px; background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.28); transform: translateY(14px); transition: transform .24s cubic-bezier(.2,.75,.25,1); }
+.ask.is-on .ask-card { transform: none; }
+.ask-title { margin: 0; font-size: 19px; font-weight: 700; }
+.ask-where { margin: 8px 0 22px; color: var(--muted); font-size: 14px; }
+.ask-row { display: flex; gap: 10px; }
+
+.finding-overlay {
+  position: absolute;
+  z-index: 45;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .24s ease;
+}
+.finding-overlay.show, .finding-overlay.is-on { opacity: 1; pointer-events: auto; }
+.finding-beacon { width: 34px; height: 34px; border-radius: 50%; background: var(--lime); animation: findingBeat 1s ease-in-out infinite; }
+.finding-overlay p { margin: 0; font-size: 17px; font-weight: 500; }
+@keyframes findingBeat { 0%, 100% { opacity: .5; transform: scale(.68); } 50% { opacity: 1; transform: scale(1); } }
+
+.toast {
+  position: absolute;
+  z-index: 50;
+  right: auto;
+  bottom: 118px;
+  left: 50%;
+  max-width: calc(100% - 36px);
+  padding: 10px 14px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #161616;
+  color: #fff;
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+  transition: .2s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%,0); }

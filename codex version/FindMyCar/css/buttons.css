@@ -1,0 +1,30 @@
+/* Shared controls and action buttons. */
+button, input { font: inherit; }
+button { color: inherit; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible { outline: 3px solid rgba(227,24,55,.28); outline-offset: 2px; }
+.round-button {
+  width: 45px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d2d2d2;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,.10);
+  cursor: pointer;
+}
+.floor-switch button { width: 48px; height: 35px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+.floor-switch button.selected { background: var(--green); color: #fff; }
+.floor-switch button[aria-pressed="true"] { background: var(--green); color: #fff; }
+.round-button.locating { background: var(--lime); color: #fff; animation: locate .75s ease-in-out infinite alternate; }
+@keyframes locate { to { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(227,24,55,.16), 0 4px 12px rgba(0,0,0,.12); } }
+.confirm-button { min-width: 122px; height: 52px; padding: 0 17px; border: 0; border-radius: 5px; background: var(--lime); color: #fff; box-shadow: none; font-size: 13px; font-weight: 700; cursor: pointer; }
+.confirm-button:active { transform: scale(.98); }
+.found-button { width: 100%; min-height: 52px; margin-top: 16px; border: 0; border-radius: 5px; background: var(--green); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.found-button:active { transform: scale(.985); }
+.map-zoom-controls button { min-width: 34px; height: 32px; padding: 0 9px; border: 0; border-right: 1px solid rgba(0,0,0,.12); background: transparent; color: #222; font-size: 16px; font-weight: 700; cursor: pointer; }
+.map-zoom-controls button:last-child { border-right: 0; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+.map-zoom-controls button:active { background: #e8e8e8; }
+.btn-ghost, .btn-solid { flex: 1; min-height: 52px; padding: 10px; border: 0; border-radius: 5px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-ghost { background: #ededed; color: var(--ink); }
+.btn-solid { background: var(--lime); color: #fff; }

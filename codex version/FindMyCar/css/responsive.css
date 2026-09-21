@@ -1,0 +1,19 @@
+/* Viewport adaptations and accessibility motion preference. */
+@media (max-width: 520px) {
+  body { background: var(--paper); }
+  .phone { width: 100vw; height: 100vh; height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+}
+@media (max-height: 740px) {
+  .home-header { top: 10px; height: 56px; }
+  .level-stack { top: 92px; bottom: 198px; gap: 26px; }
+  .level-card { border-radius: 8px; }
+  .choose-copy { bottom: 127px; }
+  .choose-copy strong { font-size: 17px; }
+  .search-box input { height: 54px; }
+  .parking-card { bottom: 114px; min-height: 102px; }
+  .save-bar { min-height: 94px; }
+  .detail-plan { min-height: 360px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

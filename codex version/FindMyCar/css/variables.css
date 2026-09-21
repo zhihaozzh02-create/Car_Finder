@@ -1,0 +1,33 @@
+/* Design tokens shared by every screen. */
+:root {
+  --green: #161616;
+  --green-2: #333333;
+  --lime: #e31837;
+  --ink: #161616;
+  --muted: #666666;
+  --paper: #ffffff;
+  --map: #eeeeec;
+  --card: #ffffff;
+  --line: rgba(0,0,0,.13);
+  --blue: #3478f6;
+  --amber: #ef9d32;
+  --shadow: 0 8px 24px rgba(0,0,0,.10);
+  /* Tokens shared with the completed index map/model renderer. */
+  --red: #e31837;
+  --on-red: #ffffff;
+  --ink-2: #666666;
+  --ink-3: #929292;
+  --sunk: #eeeeec;
+  --hair: rgba(0,0,0,.16);
+  --rule: #161616;
+  --tap: 52px;
+  --r: 5px;
+  --floor: #d7d1c5;
+  --floor-side-1: #c2bbad;
+  --floor-side-2: #9e9687;
+  --bldg: #fff7d7;
+  --bldg-side-1: #eadfae;
+  --bldg-side-2: #cdbf80;
+  --shade: #5b5345;
+  --edge: rgba(255,255,255,.65);
+}

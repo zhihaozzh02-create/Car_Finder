@@ -1,0 +1,45 @@
+/* Generated SVG floor plan, zones, bays, and map markers. */
+/* The completed index maps are rendered into these Codex plan slots. */
+.planmap, .baymap { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.planmap.is-zoomed, .baymap.is-zoomed { cursor: move; }
+.pm { fill: #fff7d7; stroke: #d8ca91; stroke-width: 1.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pa { fill: #555; font-weight: 700; letter-spacing: .02em; pointer-events: none; }
+.ps { fill: #8a8a8a; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; }
+.pz { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pz-fill { fill: var(--pc); fill-opacity: .58; stroke: var(--pc); stroke-opacity: 1; stroke-linejoin: round; transition: fill-opacity .18s; }
+.pz-tag { fill: #fff; stroke: rgba(0,0,0,.62); paint-order: stroke fill; font-weight: 700; pointer-events: none; }
+.pz:hover .pz-fill, .pz:focus-visible .pz-fill { fill-opacity: .74; }
+.pz:focus, .pz:focus-visible, .bay:focus, .bay:focus-visible { outline: none; }
+.pz.is-mine .pz-fill { stroke: var(--red); stroke-opacity: 1; fill-opacity: .68; }
+.pz.is-detected .pz-fill { stroke: var(--red); stroke-opacity: 1; fill-opacity: .68; }
+@keyframes zonePop { 0% { transform: scale(1); } 36% { transform: scale(1.05); } 100% { transform: scale(1); } }
+.pz.is-tapped { animation: zonePop .34s cubic-bezier(.3,.85,.3,1) both; transform-box: fill-box; transform-origin: 50% 50%; }
+.bay-ground { fill: var(--pc); fill-opacity: .16; stroke: var(--pc); stroke-opacity: .85; stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.bay { fill: #fff; fill-opacity: .68; stroke: #777; stroke-opacity: .6; stroke-width: .7; vector-effect: non-scaling-stroke; cursor: pointer; }
+.bay:hover, .bay:focus-visible { fill: #555; fill-opacity: .36; }
+.bay.is-car { fill: var(--red); fill-opacity: .92; stroke: var(--red); stroke-opacity: 1; }
+.hereme { pointer-events: none; }
+.here-acc { fill: #2e5bd9; fill-opacity: .12; stroke: #2e5bd9; stroke-opacity: .35; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.here-dot { fill: #2e5bd9; stroke: #fff; }
+.carmark { pointer-events: none; }
+.carmark-halo { fill: var(--red); opacity: .16; }
+.carmark-dot { fill: var(--red); stroke: #fff; }
+.carmark-eye { fill: #fff; }
+.auto-locate { pointer-events: none; }
+.auto-locate-area { fill: #2e5bd9; fill-opacity: .12; stroke: #2e5bd9; stroke-opacity: .48; stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.auto-locate-halo { fill: var(--red); opacity: .18; }
+.auto-locate-head { fill: var(--red); stroke: #fff; filter: drop-shadow(0 3px 4px rgba(0,0,0,.32)); }
+.auto-locate-eye { fill: #fff; }
+.saved-focus-ring { fill: var(--red); fill-opacity: .10; stroke: var(--red); stroke-opacity: .72; stroke-width: 2; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; transform-box: fill-box; transform-origin: center; animation: savedFocus 1.8s ease-in-out infinite; }
+@keyframes savedFocus { 50% { transform: scale(1.16); opacity: .58; } }
+.map-accuracy { position: absolute; z-index: 4; right: 10px; bottom: 10px; padding: 6px 9px; border: 1px solid rgba(0,0,0,.12); border-radius: 999px; background: rgba(255,255,255,.90); color: #444; box-shadow: 0 3px 10px rgba(0,0,0,.10); font-size: 9px; font-weight: 700; letter-spacing: .02em; pointer-events: none; }
+.map-zoom-controls { position: absolute; z-index: 6; bottom: 10px; left: 10px; display: flex; overflow: hidden; border: 1px solid rgba(0,0,0,.16); border-radius: 6px; background: rgba(255,255,255,.94); box-shadow: 0 3px 10px rgba(0,0,0,.10); }
+.detail-hint { position: absolute; z-index: 4; right: 10px; bottom: 10px; left: 10px; padding: 7px 10px; border: 1px solid rgba(0,0,0,.12); border-radius: 5px; background: rgba(255,255,255,.92); color: #333; box-shadow: 0 3px 10px rgba(0,0,0,.10); font-size: 10px; font-weight: 700; text-align: center; pointer-events: none; }
+.detail-draft-pin { pointer-events: none; }
+.detail-draft-ring { fill: #2e5bd9; fill-opacity: .10; stroke: #2e5bd9; stroke-opacity: .46; stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.detail-draft-halo { fill: var(--red); opacity: .16; }
+.detail-draft-head { fill: var(--red); stroke: #fff; }
+.detail-draft-eye { fill: #fff; }
+@keyframes carLand { 0% { transform: scale(2.4); opacity: 0; } 60% { transform: scale(.92); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+.carmark.drop { animation: carLand .5s cubic-bezier(.2,.7,.3,1.2) both; transform-box: fill-box; transform-origin: 50% 50%; }
+.sr-only { position: absolute !important; width: 1px !important; height: 1px !important; margin: -1px !important; padding: 0 !important; overflow: hidden !important; clip-path: inset(50%) !important; white-space: nowrap !important; border: 0 !important; }

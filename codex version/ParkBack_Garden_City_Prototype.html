@@ -176,8 +176,8 @@
       transform: translateY(0);
       transition: transform .25s ease;
     }
-    .level-card[data-floor="L2"] .level-model { top: 20%; height: 64%; }
-    .level-card[data-floor="L1"] .level-model { top: 17%; height: 64%; }
+    .level-card[data-floor="L2"] .level-model,
+    .level-card[data-floor="L1"] .level-model { top: 12%; height: 76%; }
     .level-card:hover .level-model, .level-card.selected .level-model { transform: translateY(-3px); }
     .model-shadow { fill: rgba(0,0,0,.10); filter: blur(5px); }
     .model-slab .top { fill: var(--top); stroke: rgba(0,0,0,.20); stroke-width: 1.3; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
@@ -1231,47 +1231,109 @@
         showToast.timer = window.setTimeout(function () { toast.classList.remove("show"); }, 1700);
       }
 
-      function prefixedDeck(level) {
-        return deck(level)
-          .replace(/id="/g, 'id="codex-' + level + '-')
-          .replace(/url\(#/g, 'url(#codex-' + level + '-');
+      /* Home models come from the same polygons as the level maps.  Normalise
+         by units-per-metre first so L1 and L2 keep a comparable physical size.
+         This is a true isometric projection: both plan axes have unit length,
+         so the source-plan proportions are not stretched in either direction. */
+      function projectPlanPoint(point) {
+        return [
+          +((point[0] + point[1]) * .8660254).toFixed(2),
+          +((point[1] - point[0]) * .5).toFixed(2)
+        ];
+      }
+
+      function planMetres(points, unitsPerMetre) {
+        return points.filter(function (point) {
+          return point.length > 1 && isFinite(point[0]) && isFinite(point[1]);
+        }).map(function (point) {
+          return [point[0] / unitsPerMetre, point[1] / unitsPerMetre];
+        });
+      }
+
+      function floorPlanItems(level) {
+        var plan = CONFIG.levels[level].plan;
+        var units = plan.upm || 1;
+        var items = plan.mall.map(function (polygon, index) {
+          return {
+            id: "mall-" + index,
+            building: true,
+            pts: planMetres(parseZone(polygon), units).map(projectPlanPoint)
+          };
+        });
+
+        CONFIG.levels[level].zones.forEach(function (zone, index) {
+          var metres = planMetres(parseZone(zone.pts), units);
+          items.push({
+            id: zone.park + "-" + index,
+            park: zone.park,
+            pts: metres.map(projectPlanPoint)
+          });
+        });
+        return items;
+      }
+
+      var planCardDepth = {
+        building: 24,
+        parking: 16
+      };
+
+      function planDeckMarkup(level, items) {
+        var markup = '';
+
+        items.slice().sort(function (a, b) {
+          var aBottom = Math.max.apply(null, a.pts.map(function (point) { return point[1]; }));
+          var bBottom = Math.max.apply(null, b.pts.map(function (point) { return point[1]; }));
+          return aBottom - bBottom;
+        }).forEach(function (item) {
+          if (item.building) {
+            markup += '<g class="plan-card-mass">' +
+              slab(item.pts, planCardDepth.building, planCardDepth.building,
+                'var(--bldg)', 'var(--bldg-side-2)') +
+              '</g>';
+          } else {
+            var fill = parkFill(item.park);
+            markup += '<g class="plan-card-zone" data-zone="' + item.id + '">' +
+              slab(item.pts, planCardDepth.parking, planCardDepth.parking,
+                fill, sideColour(fill, .38)) +
+              '</g>';
+          }
+        });
+        return markup;
       }
 
       function renderCardModels() {
-        var boxes = Object.keys(CONFIG.levels).map(function (level) {
-          var items = shapesOn(level);
-          var floor = floorOf(items);
-          var towers = items.filter(function (item) { return item.bldg; })
-            .reduce(function (all, item) {
-              return all.concat(item.pts.map(function (point) { return point[1] - MODEL.tower; }));
-            }, []);
-          var xs = floor.map(function (point) { return point[0]; });
-          var ys = floor.map(function (point) { return point[1]; });
+        var models = Object.keys(CONFIG.levels).map(function (level) {
+          var items = floorPlanItems(level);
+          var points = items.reduce(function (all, item) { return all.concat(item.pts); }, []);
+          var xs = points.map(function (point) { return point[0]; });
+          var ys = points.map(function (point) { return point[1]; });
           return {
             level: level,
+            items: items,
             x0: Math.min.apply(null, xs),
             x1: Math.max.apply(null, xs),
-            y0: Math.min.apply(null, ys.concat(towers)),
-            y1: Math.max.apply(null, ys) + MODEL.floor
+            y0: Math.min.apply(null, ys) - planCardDepth.building,
+            y1: Math.max.apply(null, ys)
           };
         });
-        var margin = MODEL.margin;
-        var width = Math.max.apply(null, boxes.map(function (box) { return box.x1 - box.x0; })) + margin * 2;
-        var height = Math.max.apply(null, boxes.map(function (box) { return box.y1 - box.y0; })) + margin * 2;
+        var margin = 28;
+        var width = Math.max.apply(null, models.map(function (model) { return model.x1 - model.x0; })) + margin * 2;
+        var height = Math.max.apply(null, models.map(function (model) { return model.y1 - model.y0; })) + margin * 2;
 
         cards.forEach(function (card) {
           var level = card.getAttribute("data-floor");
-          var box = boxes.filter(function (item) { return item.level === level; })[0];
+          var model = models.filter(function (item) { return item.level === level; })[0];
           var viewBox = [
-            (box.x0 + box.x1) / 2 - width / 2,
-            (box.y0 + box.y1) / 2 - height / 2,
+            (model.x0 + model.x1) / 2 - width / 2,
+            (model.y0 + model.y1) / 2 - height / 2,
             width,
             height
           ].map(function (number) { return number.toFixed(1); }).join(" ");
           var svg = card.querySelector(".level-model");
           svg.setAttribute("viewBox", viewBox);
           svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-          svg.innerHTML = prefixedDeck(level);
+          svg.setAttribute("aria-label", CONFIG.levels[level].name + " 3D model based on the floor plan");
+          svg.innerHTML = planDeckMarkup(level, model.items);
         });
       }
 
@@ -1740,6 +1802,7 @@
         draftBayByArea = {};
       });
 
+      renderCardModels();
       syncSkin();
     })();
   </script>

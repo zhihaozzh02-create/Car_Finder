@@ -1,0 +1,42 @@
+/* App shell, status bar, and shared screen layout. */
+.phone {
+  position: relative;
+  width: min(430px, 100vw);
+  height: min(900px, 100vh);
+  height: min(900px, 100dvh);
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid #d8d8d8;
+  border-radius: 32px;
+  background: var(--paper);
+  box-shadow: 0 28px 80px rgba(0,0,0,.18);
+}
+
+.status-bar {
+  position: absolute;
+  z-index: 30;
+  inset: 0 0 auto;
+  height: 39px;
+  padding: 11px 22px 0;
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.status-icons { display: flex; align-items: center; gap: 6px; }
+.signal { width: 15px; height: 9px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: skew(-20deg); }
+.battery { position: relative; width: 20px; height: 10px; border: 1.5px solid currentColor; border-radius: 3px; }
+.battery::before { content: ""; position: absolute; inset: 2px; border-radius: 1px; background: currentColor; }
+.battery::after { content: ""; position: absolute; right: -3px; top: 2px; width: 2px; height: 4px; border-radius: 0 2px 2px 0; background: currentColor; }
+
+.view {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(18px);
+  transition: opacity .28s ease, transform .38s cubic-bezier(.22,.8,.24,1);
+}
+.view.active, .view.is-on { z-index: 2; opacity: 1; pointer-events: auto; transform: none; }
